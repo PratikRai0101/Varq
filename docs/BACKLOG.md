@@ -23,7 +23,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 
 ## Phase 3 — Import pipeline
 - [x] `ImportService`: EPUB import via the native EPUB parser, extract title/author/cover
-- [ ] `ImportService`: PDF import via PDFKit
+- [x] `ImportService`: PDF import via PDFKit
 - [ ] `ImportService`: CBZ/CBR import (archive extraction + first-page-as-cover)
 - [ ] Duplicate detection via content hash
 - [ ] Drag-and-drop target on LibraryView + `NSOpenPanel` fallback
