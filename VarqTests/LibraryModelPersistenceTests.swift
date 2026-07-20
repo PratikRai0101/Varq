@@ -14,11 +14,11 @@ struct LibraryModelPersistenceTests {
             configurations: configuration
         )
         let context = ModelContext(container)
-        let bookmarkData = Data([0x01, 0x02, 0x03])
+        let libraryRelativePath = "Books/a-book.epub"
         let book = Book(
             title: "A Book",
             author: "An Author",
-            fileBookmarkData: bookmarkData,
+            libraryRelativePath: libraryRelativePath,
             format: .epub
         )
         let progress = ReadingProgress(
@@ -43,7 +43,7 @@ struct LibraryModelPersistenceTests {
 
         #expect(savedBook.title == "A Book")
         #expect(savedBook.author == "An Author")
-        #expect(savedBook.fileBookmarkData == bookmarkData)
+        #expect(savedBook.libraryRelativePath == libraryRelativePath)
         #expect(savedBook.format == .epub)
         #expect(savedBook.readingProgress?.percentComplete == 0.25)
         #expect(savedBook.highlights.count == 1)

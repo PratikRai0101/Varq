@@ -7,7 +7,7 @@ final class Book {
     var title: String
     var author: String
     var coverImageData: Data?
-    var fileBookmarkData: Data
+    var libraryRelativePath: String
     var formatRawValue: String
     var dateAdded: Date
     var isPrivate: Bool
@@ -28,7 +28,7 @@ final class Book {
         title: String,
         author: String,
         coverImageData: Data? = nil,
-        fileBookmarkData: Data,
+        libraryRelativePath: String,
         format: BookFormat,
         dateAdded: Date = .now,
         isPrivate: Bool = false
@@ -37,7 +37,7 @@ final class Book {
         self.title = title
         self.author = author
         self.coverImageData = coverImageData
-        self.fileBookmarkData = fileBookmarkData
+        self.libraryRelativePath = libraryRelativePath
         self.formatRawValue = format.rawValue
         self.dateAdded = dateAdded
         self.isPrivate = isPrivate

@@ -18,7 +18,7 @@ final class Book {
     var title: String
     var author: String
     var coverImageData: Data?
-    var fileBookmarkData: Data // security-scoped bookmark data, not a raw path
+    var libraryRelativePath: String // relative path inside Varq's managed library
     var format: BookFormat // enum: epub, pdf, cbz, cbr
     var dateAdded: Date
     var isPrivate: Bool
@@ -47,7 +47,7 @@ final class Highlight {
 }
 ```
 
-Book file handling must account for App Sandbox constraints — store security-scoped bookmarks (`Data`), not raw file paths, and resolve them fresh each session per Apple's sandboxing guidance.
+Book file handling must account for App Sandbox constraints — `ImportService` uses the user's temporary security-scoped access only to copy a book into Varq's managed library. Persist the managed copy's relative path, never an external path or security-scoped bookmark.
 
 ## Reader engine boundary
 

@@ -12,6 +12,6 @@ _Avoid_: Readium integration, renderer
 A serializable, format-specific record of a reader's position in a book.
 _Avoid_: page position, CFI
 
-**Book file bookmark**:
-Security-scoped bookmark data that authorizes Varq to reopen an imported book file.
-_Avoid_: file URL, file path
+**Managed library file**:
+Varq's private copy of an imported book, identified by a relative path within its managed library.
+_Avoid_: book file bookmark, external file URL
