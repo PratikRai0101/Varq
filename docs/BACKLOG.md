@@ -18,8 +18,8 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [ ] Verify light/dark mode both render correctly against the color table
 
 ## Phase 2 — Data models
-- [ ] Implement `Book`, `ReadingProgress`, `Highlight` SwiftData models per `ARCHITECTURE.md`
-- [ ] Write unit tests for model relationships and basic persistence
+- [x] Implement `Book`, `ReadingProgress`, `Highlight` SwiftData models per `ARCHITECTURE.md`
+- [x] Write unit tests for model relationships and basic persistence
 
 ## Phase 3 — Import pipeline
 - [ ] `ImportService`: EPUB import via the native EPUB parser, extract title/author/cover

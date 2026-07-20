@@ -18,7 +18,7 @@ final class Book {
     var title: String
     var author: String
     var coverImageData: Data?
-    var fileURL: URL // security-scoped bookmark data, not a raw path
+    var fileBookmarkData: Data // security-scoped bookmark data, not a raw path
     var format: BookFormat // enum: epub, pdf, cbz, cbr
     var dateAdded: Date
     var isPrivate: Bool
@@ -28,7 +28,8 @@ final class Book {
 
 @Model
 final class ReadingProgress {
-    var bookID: UUID
+    var id: UUID
+    var book: Book?
     var locatorData: Data // Reading locator, serialized
     var lastReadDate: Date
     var percentComplete: Double
@@ -37,7 +38,7 @@ final class ReadingProgress {
 @Model
 final class Highlight {
     var id: UUID
-    var bookID: UUID
+    var book: Book?
     var locatorData: Data // Reading locator for the selection
     var selectedText: String
     var note: String?
@@ -46,7 +47,7 @@ final class Highlight {
 }
 ```
 
-Note: `fileURL` handling must account for App Sandbox constraints — store security-scoped bookmarks (`Data`), not raw file paths, and resolve them fresh each session per Apple's sandboxing guidance.
+Book file handling must account for App Sandbox constraints — store security-scoped bookmarks (`Data`), not raw file paths, and resolve them fresh each session per Apple's sandboxing guidance.
 
 ## Reader engine boundary
 

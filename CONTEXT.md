@@ -11,3 +11,7 @@ _Avoid_: Readium integration, renderer
 **Reading locator**:
 A serializable, format-specific record of a reader's position in a book.
 _Avoid_: page position, CFI
+
+**Book file bookmark**:
+Security-scoped bookmark data that authorizes Varq to reopen an imported book file.
+_Avoid_: file URL, file path
