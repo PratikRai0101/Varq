@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7C1B631A300EDB83004350B9 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 7C1B62F7300ED048004350B9 /* ZIPFoundation */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7C1B62DB300ED049004350B9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7C1B631A300EDB83004350B9 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -195,10 +200,10 @@
 				Base,
 			);
 			mainGroup = 7C1B62C2300ED048004350B9;
+			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				7C1B62F8300ED048004350B9 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
-			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7C1B62CC300ED048004350B9 /* Products */;
 			projectDirPath = "";

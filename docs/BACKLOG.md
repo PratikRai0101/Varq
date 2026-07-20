@@ -22,7 +22,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] Write unit tests for model relationships and basic persistence
 
 ## Phase 3 — Import pipeline
-- [ ] `ImportService`: EPUB import via the native EPUB parser, extract title/author/cover
+- [x] `ImportService`: EPUB import via the native EPUB parser, extract title/author/cover
 - [ ] `ImportService`: PDF import via PDFKit
 - [ ] `ImportService`: CBZ/CBR import (archive extraction + first-page-as-cover)
 - [ ] Duplicate detection via content hash
