@@ -53,6 +53,20 @@ enum ComicPageLayout: String, CaseIterable, Codable, Sendable {
     }
 }
 
+enum ComicPageFit: String, CaseIterable, Codable, Sendable {
+    case fitWidth
+    case fitHeight
+    case actualSize
+
+    var displayName: String {
+        switch self {
+        case .fitWidth: "Fit width"
+        case .fitHeight: "Fit height"
+        case .actualSize: "Actual size"
+        }
+    }
+}
+
 enum ReadingFontFamily: String, CaseIterable, Codable, Sendable {
     case georgia
     case newYork
@@ -87,6 +101,7 @@ struct ReadingAppearance: Codable, Equatable, Sendable {
     var pageTone: ReaderPageTone
     var comicReadingDirection: ComicReadingDirection
     var comicPageLayout: ComicPageLayout
+    var comicPageFit: ComicPageFit
     var fontFamily: ReadingFontFamily
     var fontSize: Double
     var lineHeight: Double
@@ -96,6 +111,7 @@ struct ReadingAppearance: Codable, Equatable, Sendable {
         pageTone: ReaderPageTone = .sepia,
         comicReadingDirection: ComicReadingDirection = .leftToRight,
         comicPageLayout: ComicPageLayout = .singlePage,
+        comicPageFit: ComicPageFit = .fitWidth,
         fontFamily: ReadingFontFamily = .georgia,
         fontSize: Double = Self.defaultFontSize,
         lineHeight: Double = Self.defaultLineHeight,
@@ -104,6 +120,7 @@ struct ReadingAppearance: Codable, Equatable, Sendable {
         self.pageTone = pageTone
         self.comicReadingDirection = comicReadingDirection
         self.comicPageLayout = comicPageLayout
+        self.comicPageFit = comicPageFit
         self.fontFamily = fontFamily
         self.fontSize = fontSize
         self.lineHeight = lineHeight

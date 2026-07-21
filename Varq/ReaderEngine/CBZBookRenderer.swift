@@ -6,30 +6,33 @@ protocol CBZPageView: AnyObject {
     var renderedView: NSView { get }
 
     func displayImages(at fileURLs: [URL]) throws
+    func setPageFit(_ pageFit: ComicPageFit)
     func clearImage()
 }
 
 @MainActor
-final class CBZImageView: NSView, CBZPageView {
-    private let imageViews = [NSImageView(), NSImageView()]
-    private let stackView: NSStackView
+final class CBZImageView: NSScrollView, CBZPageView {
+    private let canvasView = ComicImageCanvasView()
 
     var renderedView: NSView { self }
 
     override init(frame frameRect: NSRect) {
-        stackView = NSStackView(views: imageViews)
         super.init(frame: frameRect)
-        configureStackView()
+        configureScrollView()
     }
 
     required init?(coder: NSCoder) {
-        stackView = NSStackView(views: imageViews)
         super.init(coder: coder)
-        configureStackView()
+        configureScrollView()
+    }
+
+    override func layout() {
+        super.layout()
+        canvasView.updateViewportSize(contentView.bounds.size)
     }
 
     func displayImages(at fileURLs: [URL]) throws {
-        guard !fileURLs.isEmpty, fileURLs.count <= imageViews.count else {
+        guard !fileURLs.isEmpty, fileURLs.count <= ComicImageCanvasView.maximumImageCount else {
             throw BookRendererError.invalidLocator
         }
         let images = try fileURLs.map { fileURL -> NSImage in
@@ -38,35 +41,91 @@ final class CBZImageView: NSView, CBZPageView {
             }
             return image
         }
+        canvasView.images = images
+    }
 
-        for (index, imageView) in imageViews.enumerated() {
-            imageView.image = images.indices.contains(index) ? images[index] : nil
-            imageView.isHidden = !images.indices.contains(index)
-        }
+    func setPageFit(_ pageFit: ComicPageFit) {
+        canvasView.pageFit = pageFit
     }
 
     func clearImage() {
-        for imageView in imageViews {
-            imageView.image = nil
-            imageView.isHidden = true
+        canvasView.images = []
+    }
+
+    private func configureScrollView() {
+        drawsBackground = false
+        hasHorizontalScroller = true
+        hasVerticalScroller = true
+        autohidesScrollers = true
+        documentView = canvasView
+    }
+}
+
+@MainActor
+private final class ComicImageCanvasView: NSView {
+    static let maximumImageCount = 2
+
+    var images: [NSImage] = [] {
+        didSet { updateCanvasSize() }
+    }
+    var pageFit: ComicPageFit = .fitWidth {
+        didSet { updateCanvasSize() }
+    }
+
+    private var viewportSize = NSSize(width: 1, height: 1)
+
+    override var isFlipped: Bool { true }
+
+    func updateViewportSize(_ viewportSize: NSSize) {
+        guard self.viewportSize != viewportSize else {
+            return
+        }
+        self.viewportSize = viewportSize
+        updateCanvasSize()
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        var horizontalOrigin: CGFloat = 0
+        for image in images {
+            let pageSize = renderedSize(for: image)
+            let verticalOrigin = max((bounds.height - pageSize.height) / 2, 0)
+            image.draw(
+                in: NSRect(origin: NSPoint(x: horizontalOrigin, y: verticalOrigin), size: pageSize),
+                from: .zero,
+                operation: .sourceOver,
+                fraction: 1,
+                respectFlipped: true,
+                hints: nil
+            )
+            horizontalOrigin += pageSize.width
         }
     }
 
-    private func configureStackView() {
-        for imageView in imageViews {
-            imageView.imageScaling = .scaleProportionallyUpOrDown
-            imageView.imageAlignment = .alignCenter
+    private func updateCanvasSize() {
+        let sizes = images.map(renderedSize(for:))
+        let width = max(sizes.reduce(0) { $0 + $1.width }, viewportSize.width)
+        let height = max(sizes.map(\.height).max() ?? 0, viewportSize.height)
+        frame = NSRect(origin: .zero, size: NSSize(width: width, height: height))
+        needsDisplay = true
+    }
+
+    private func renderedSize(for image: NSImage) -> NSSize {
+        let imageSize = image.size
+        guard imageSize.width > 0, imageSize.height > 0 else {
+            return .zero
         }
-        stackView.orientation = .horizontal
-        stackView.distribution = .fillEqually
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stackView)
-        NSLayoutConstraint.activate([
-            stackView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stackView.topAnchor.constraint(equalTo: topAnchor),
-            stackView.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
+
+        switch pageFit {
+        case .fitWidth:
+            let pageWidth = viewportSize.width / CGFloat(max(images.count, 1))
+            return NSSize(width: pageWidth, height: imageSize.height * (pageWidth / imageSize.width))
+        case .fitHeight:
+            let pageHeight = viewportSize.height
+            return NSSize(width: imageSize.width * (pageHeight / imageSize.height), height: pageHeight)
+        case .actualSize:
+            return imageSize
+        }
     }
 }
 
@@ -117,6 +176,7 @@ final class CBZBookRenderer: BookRenderer {
     func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
         readingDirection = appearance.comicReadingDirection
         pageLayout = appearance.comicPageLayout
+        pageView.setPageFit(appearance.comicPageFit)
         if let currentLocator {
             try await go(to: currentLocator)
         }

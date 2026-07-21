@@ -70,11 +70,15 @@ struct ReaderView: View {
                     ComicReadingControls(
                         readingDirection: viewModel.readingAppearance.comicReadingDirection,
                         pageLayout: viewModel.readingAppearance.comicPageLayout,
+                        pageFit: viewModel.readingAppearance.comicPageFit,
                         setReadingDirection: { readingDirection in
                             Task { await viewModel.setComicReadingDirection(readingDirection) }
                         },
                         setPageLayout: { pageLayout in
                             Task { await viewModel.setComicPageLayout(pageLayout) }
+                        },
+                        setPageFit: { pageFit in
+                            Task { await viewModel.setComicPageFit(pageFit) }
                         }
                     )
                 }

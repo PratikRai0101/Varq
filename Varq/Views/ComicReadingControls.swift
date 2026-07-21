@@ -3,8 +3,10 @@ import SwiftUI
 struct ComicReadingControls: View {
     let readingDirection: ComicReadingDirection
     let pageLayout: ComicPageLayout
+    let pageFit: ComicPageFit
     let setReadingDirection: (ComicReadingDirection) -> Void
     let setPageLayout: (ComicPageLayout) -> Void
+    let setPageFit: (ComicPageFit) -> Void
 
     var body: some View {
         Menu("Comic layout", systemImage: "rectangle.portrait.arrowtriangle.2.outward") {
@@ -19,6 +21,12 @@ struct ComicReadingControls: View {
                     Text(pageLayout.displayName).tag(pageLayout)
                 }
             }
+
+            Picker("Page fit", selection: pageFitBinding) {
+                ForEach(ComicPageFit.allCases, id: \.self) { pageFit in
+                    Text(pageFit.displayName).tag(pageFit)
+                }
+            }
         }
     }
 
@@ -28,5 +36,9 @@ struct ComicReadingControls: View {
 
     private var layout: Binding<ComicPageLayout> {
         Binding(get: { pageLayout }, set: setPageLayout)
+    }
+
+    private var pageFitBinding: Binding<ComicPageFit> {
+        Binding(get: { pageFit }, set: setPageFit)
     }
 }

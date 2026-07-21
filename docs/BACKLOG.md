@@ -48,7 +48,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] CBZ-specific reader path (image sequence, not the text reader engine)
 - [x] Right-to-left toggle
 - [x] Dual-page spread option
-- [ ] Page-fit options (fit width / fit height / actual size)
+- [x] Page-fit options (fit width / fit height / actual size)
 
 ## Phase 7 — Highlights & notes
 - [ ] Text selection → highlight creation UI (color picker from design system palette)

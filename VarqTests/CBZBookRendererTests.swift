@@ -25,6 +25,16 @@ struct CBZBookRendererTests {
         #expect(renderer.currentLocator?.spineIndex == 0)
     }
 
+    @Test func appliesTheSelectedPageFit() async throws {
+        let pageView = FakeCBZPageView()
+        let renderer = CBZBookRenderer(pageView: pageView)
+        try await renderer.open(bookURL: fixtureURL, at: nil)
+
+        try await renderer.updateReadingAppearance(ReadingAppearance(comicPageFit: .actualSize))
+
+        #expect(pageView.pageFit == .actualSize)
+    }
+
     @Test func displaysTwoPagesForADualPageSpread() async throws {
         let pageView = FakeCBZPageView()
         let renderer = CBZBookRenderer(pageView: pageView)
@@ -72,10 +82,15 @@ private final class FakeCBZPageView: CBZPageView {
     let renderedView = NSView()
     private(set) var displayedURL: URL?
     private(set) var displayedURLs: [URL] = []
+    private(set) var pageFit: ComicPageFit?
 
     func displayImages(at fileURLs: [URL]) throws {
         displayedURLs = fileURLs
         displayedURL = fileURLs.last
+    }
+
+    func setPageFit(_ pageFit: ComicPageFit) {
+        self.pageFit = pageFit
     }
 
     func clearImage() {
