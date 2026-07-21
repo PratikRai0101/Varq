@@ -187,7 +187,18 @@ struct LibraryView: View {
 
     @ViewBuilder
     private func bookMenu(for book: Book) -> some View {
-        if !book.isPrivate {
+        if book.isPrivate {
+            Button("Unmark as private", systemImage: "lock.open") {
+                privateBookViewModel.unmarkPrivate(
+                    book: book,
+                    managedFileURL: bookURL(for: book),
+                    using: modelContext
+                )
+                if privateBookViewModel.errorMessage != nil {
+                    isPrivateBookErrorPresented = true
+                }
+            }
+        } else {
             Button("Mark as private", systemImage: "lock") {
                 privateBookViewModel.markPrivate(
                     book: book,

@@ -30,6 +30,18 @@ final class PrivateBookViewModel {
         }
     }
 
+    func unmarkPrivate(book: Book, managedFileURL: URL, using modelContext: ModelContext) {
+        guard book.isPrivate else { return }
+        do {
+            try protectionService.unprotect(bookID: book.id, managedFileURL: managedFileURL)
+            book.isPrivate = false
+            try modelContext.save()
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func clearError() {
         errorMessage = nil
     }
