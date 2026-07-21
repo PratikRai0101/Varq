@@ -34,6 +34,21 @@ struct ReaderViewModelTests {
         #expect(book.readingProgress?.percentComplete == 0)
     }
 
+    @Test func persistsTheRendererOverallProgress() async throws {
+        let initialLocator = try epubLocator(progression: 0)
+        let renderer = FakeBookRenderer(locator: initialLocator, reportedProgressFraction: 0.4)
+        let context = try modelContext()
+        let book = book()
+        context.insert(book)
+        try context.save()
+        let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
+        viewModel.configurePersistence(using: context)
+
+        await viewModel.open()
+
+        #expect(book.readingProgress?.percentComplete == 0.4)
+    }
+
     @Test func persistsTheLocatorAfterNavigation() async throws {
         let initialLocator = try epubLocator(progression: 0)
         let advancedLocator = try epubLocator(progression: 0.5)
@@ -164,10 +179,12 @@ private final class FakeBookRenderer: BookRenderer, TextSelectionProviding {
     let view = NSView()
     let supportedFormat: BookFormat = .epub
     private let initialLocator: BookLocator
+    private let reportedProgressFraction: Double?
     private let advancedLocator: BookLocator?
     private let selectedAnchor: TextHighlightAnchor?
 
     private(set) var currentLocator: BookLocator?
+    var readingProgressFraction: Double { reportedProgressFraction ?? currentLocator?.progression ?? 0 }
     private(set) var openedLocator: BookLocator?
     private(set) var updatedAppearance: ReadingAppearance?
     private(set) var didClose = false
@@ -175,11 +192,13 @@ private final class FakeBookRenderer: BookRenderer, TextSelectionProviding {
     init(
         locator: BookLocator,
         advancedLocator: BookLocator? = nil,
-        selectedAnchor: TextHighlightAnchor? = nil
+        selectedAnchor: TextHighlightAnchor? = nil,
+        reportedProgressFraction: Double? = nil
     ) {
         initialLocator = locator
         self.advancedLocator = advancedLocator
         self.selectedAnchor = selectedAnchor
+        self.reportedProgressFraction = reportedProgressFraction
     }
 
     func open(bookURL: URL, at locator: BookLocator?) async throws {

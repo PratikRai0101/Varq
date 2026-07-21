@@ -140,6 +140,12 @@ final class CBZBookRenderer: BookRenderer {
 
     var view: NSView { pageView.renderedView }
     let supportedFormat: BookFormat = .cbz
+    var readingProgressFraction: Double {
+        guard let publication, let currentLocator, publication.pages.count > 1 else {
+            return 0
+        }
+        return min(max(Double(currentLocator.spineIndex) / Double(publication.pages.count - 1), 0), 1)
+    }
 
     init() {
         pageView = CBZImageView()

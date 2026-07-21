@@ -33,6 +33,14 @@ final class PDFBookRenderer: BookRenderer {
 
     var view: NSView { navigationView.renderedView }
     let supportedFormat: BookFormat = .pdf
+    var readingProgressFraction: Double {
+        guard let document = navigationView.document,
+              let currentLocator,
+              document.pageCount > 1 else {
+            return 0
+        }
+        return min(max(Double(currentLocator.spineIndex) / Double(document.pageCount - 1), 0), 1)
+    }
 
     init() {
         let pdfView = PDFView()

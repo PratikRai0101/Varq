@@ -5,6 +5,7 @@ import Foundation
 protocol BookRenderer: AnyObject {
     var view: NSView { get }
     var currentLocator: BookLocator? { get }
+    var readingProgressFraction: Double { get }
     var supportedFormat: BookFormat { get }
 
     func open(bookURL: URL, at locator: BookLocator?) async throws
@@ -13,6 +14,12 @@ protocol BookRenderer: AnyObject {
     func goForward() async throws -> Bool
     func goBackward() async throws -> Bool
     func go(to locator: BookLocator) async throws
+}
+
+extension BookRenderer {
+    var readingProgressFraction: Double {
+        currentLocator?.progression ?? 0
+    }
 }
 
 enum BookRendererError: Error, Equatable {

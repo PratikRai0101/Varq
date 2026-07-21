@@ -15,9 +15,11 @@ struct CBZBookRendererTests {
         #expect(renderer.currentLocator?.spineIndex == 0)
         #expect(renderer.currentLocator?.resourceHref == "001.png")
         #expect(pageView.displayedURL?.lastPathComponent == "001.png")
+        #expect(renderer.readingProgressFraction == 0)
 
         #expect(try await renderer.goForward())
         #expect(renderer.currentLocator?.spineIndex == 1)
+        #expect(renderer.readingProgressFraction == 1)
         #expect(pageView.displayedURL?.lastPathComponent == "002.png")
         #expect(!(try await renderer.goForward()))
 

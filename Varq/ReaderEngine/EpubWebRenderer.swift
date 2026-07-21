@@ -14,6 +14,12 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
     private(set) var currentLocator: BookLocator?
     var view: NSView { webView }
     let supportedFormat: BookFormat = .epub
+    var readingProgressFraction: Double {
+        guard let publication, let currentLocator, !publication.spine.isEmpty else {
+            return 0
+        }
+        return min(max((Double(currentLocator.spineIndex) + currentLocator.progression) / Double(publication.spine.count), 0), 1)
+    }
 
     override init() {
         webView = WKWebView()

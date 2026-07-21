@@ -207,7 +207,7 @@ final class ReaderViewModel {
 
         do {
             let locatorData = try JSONEncoder().encode(currentLocator)
-            let percentComplete = max(0, min(1, currentLocator.progression))
+            let percentComplete = max(0, min(1, renderer.readingProgressFraction))
             if let readingProgress = book.readingProgress {
                 readingProgress.locatorData = locatorData
                 readingProgress.lastReadDate = .now
