@@ -18,6 +18,7 @@ final class ReaderViewModel {
     var rendererView: NSView { renderer.view }
     var highlightedBook: Book { book }
     var supportsComicControls: Bool { renderer.supportedFormat == .cbz }
+    var supportsEpubLayoutControls: Bool { renderer.supportedFormat == .epub }
     var supportsTextHighlights: Bool { renderer is any TextSelectionProviding }
 
     init(
@@ -54,6 +55,12 @@ final class ReaderViewModel {
 
     func goBackward() async -> Bool {
         await navigate { try await renderer.goBackward() }
+    }
+
+    func setEpubPageLayout(_ pageLayout: EpubPageLayout) async {
+        var appearance = readingAppearance
+        appearance.epubPageLayout = pageLayout
+        await updateReadingAppearance(appearance)
     }
 
     func setComicReadingDirection(_ readingDirection: ComicReadingDirection) async {

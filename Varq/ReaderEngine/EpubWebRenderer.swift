@@ -238,6 +238,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         (() => {
             const width = Math.max(window.innerWidth, 1);
             const height = Math.max(window.innerHeight, 1);
+            const columnWidth = width / \(appearance.epubPageLayout == .twoPageSpread ? 2 : 1);
             const existingStyle = document.getElementById('varq-pagination-style');
             const style = existingStyle || document.createElement('style');
             if (!existingStyle) {
@@ -246,7 +247,10 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
             }
             style.textContent = `
                 html { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; background: \(appearance.pageTone.cssBackgroundColor) !important; }
-                body { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; box-sizing: border-box !important; column-width: ${width}px !important; column-gap: 0 !important; column-fill: auto !important; padding-left: \(appearance.horizontalMargin)px !important; padding-right: \(appearance.horizontalMargin)px !important; background: \(appearance.pageTone.cssBackgroundColor) !important; color: \(appearance.pageTone.cssTextColor) !important; font-family: \(appearance.fontFamily.cssFamily) !important; font-size: \(appearance.fontSize)px !important; line-height: \(appearance.lineHeight) !important; }
+                body { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; box-sizing: border-box !important; column-width: ${columnWidth}px !important; column-gap: 0 !important; column-fill: auto !important; padding-left: \(appearance.horizontalMargin)px !important; padding-right: \(appearance.horizontalMargin)px !important; background: \(appearance.pageTone.cssBackgroundColor) !important; color: \(appearance.pageTone.cssTextColor) !important; font-family: \(appearance.fontFamily.cssFamily) !important; font-size: \(appearance.fontSize)px !important; line-height: \(appearance.lineHeight) !important; }
+                body *, body *::before, body *::after { box-sizing: border-box !important; max-width: 100% !important; white-space: normal !important; }
+                p, li, blockquote, dd, td, th { overflow-wrap: break-word !important; }
+                img, svg, video, canvas { height: auto !important; max-width: 100% !important; }
             `;
             return true;
         })();

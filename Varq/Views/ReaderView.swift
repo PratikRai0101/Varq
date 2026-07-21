@@ -82,6 +82,17 @@ struct ReaderView: View {
                 }
             }
 
+            if viewModel.supportsEpubLayoutControls {
+                ToolbarItem {
+                    EpubLayoutControls(
+                        pageLayout: viewModel.readingAppearance.epubPageLayout,
+                        setPageLayout: { pageLayout in
+                            Task { await viewModel.setEpubPageLayout(pageLayout) }
+                        }
+                    )
+                }
+            }
+
             if viewModel.supportsComicControls {
                 ToolbarItem {
                     ComicReadingControls(
