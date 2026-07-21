@@ -22,7 +22,7 @@ final class LibraryViewModel {
     }
 
     private(set) var books: [Book] = []
-    private var allBooks: [Book] = []
+    private(set) var allBooks: [Book] = []
     private(set) var collections: [BookCollection] = []
     var sortOrder: SortOrder = .title {
         didSet { sortBooks() }

@@ -11,18 +11,18 @@ struct BookCoverCard: View {
                 .aspectRatio(0.68, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.compact))
 
-            if let progress = book.readingProgress, progress.percentComplete > 0 {
+            if let progress = book.readingProgress {
                 GeometryReader { proxy in
                     ZStack(alignment: .leading) {
                         Rectangle()
                             .fill(Color.varqIndigo.opacity(0.5))
                         Rectangle()
                             .fill(Color.varqSaffron)
-                            .frame(width: proxy.size.width * CGFloat(progress.percentComplete))
+                            .frame(width: proxy.size.width * CGFloat(max(0, min(1, progress.percentComplete))))
                     }
                 }
-                .frame(height: 4)
-                .clipShape(RoundedRectangle(cornerRadius: 2))
+                .frame(height: 6)
+                .clipShape(RoundedRectangle(cornerRadius: 3))
             }
 
             VStack(alignment: .leading, spacing: VarqSpacing.compact) {
@@ -35,6 +35,14 @@ struct BookCoverCard: View {
                     .font(VarqTypography.ui(.subheadline))
                     .foregroundStyle(Color.varqTerracotta)
                     .lineLimit(1)
+
+                if let progress = book.readingProgress {
+                    let pct = Int(max(0, min(1, progress.percentComplete)) * 100)
+                    Text("\(pct)% complete")
+                        .font(VarqTypography.ui(.caption))
+                        .foregroundStyle(Color.varqSaffron)
+                        .lineLimit(1)
+                }
             }
             // Pad both edges so glyph overhang stays inside the card bounds.
             .padding(.horizontal, VarqSpacing.regular)
@@ -54,6 +62,7 @@ struct BookCoverCard: View {
                 Image(nsImage: coverImage)
                     .resizable()
                     .scaledToFill()
+                    .clipped()
             } else {
                 RoundedRectangle(cornerRadius: VarqSpacing.compact)
                     .fill(Color.varqIndigo)
@@ -74,5 +83,6 @@ struct BookCoverCard: View {
                     .padding(VarqSpacing.compact)
             }
         }
+        .clipped()
     }
 }

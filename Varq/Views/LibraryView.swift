@@ -86,11 +86,16 @@ struct LibraryView: View {
     }
 
     private var sidebar: some View {
-        List(selection: $libraryViewModel.selectedCollection) {
+        List {
             Section("Collections") {
                 ForEach(libraryViewModel.collections) { collection in
-                    Label(collection.name, systemImage: iconForCollection(collection))
-                        .tag(collection as BookCollection?)
+                    Button {
+                        libraryViewModel.selectedCollection = collection
+                    } label: {
+                        Label(collection.name, systemImage: iconForCollection(collection))
+                            .foregroundStyle(libraryViewModel.selectedCollection?.id == collection.id ? Color.accentColor : Color.primary)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .onDelete { indexSet in
                     for index in indexSet {
@@ -112,8 +117,10 @@ struct LibraryView: View {
 
     private var libraryGrid: some View {
         Group {
-            if libraryViewModel.books.isEmpty {
+            if libraryViewModel.allBooks.isEmpty {
                 LibraryEmptyState(importBooks: chooseFiles)
+            } else if libraryViewModel.books.isEmpty {
+                collectionEmptyState
             } else {
                 ScrollView {
                     LazyVGrid(
@@ -122,6 +129,7 @@ struct LibraryView: View {
                     ) {
                         ForEach(libraryViewModel.books) { book in
                             bookCard(for: book)
+                                .frame(maxWidth: .infinity)
                         }
                     }
                 }
@@ -157,6 +165,25 @@ struct LibraryView: View {
                     }
                 }
         }
+    }
+
+    private var collectionEmptyState: some View {
+        VStack(spacing: VarqSpacing.regular) {
+            Image(systemName: "tray")
+                .font(VarqTypography.ui(.largeTitle))
+                .foregroundStyle(Color.varqSaffron)
+
+            Text("No books in \(libraryViewModel.selectedCollection?.name ?? "this collection")")
+                .font(VarqTypography.uiMedium(.title2))
+                .foregroundStyle(Color.varqInkDark)
+
+            Text("Books that match this collection will appear here.")
+                .font(VarqTypography.ui(.body))
+                .foregroundStyle(Color.varqParchmentDeep)
+                .multilineTextAlignment(.center)
+        }
+        .padding(VarqSpacing.large)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func iconForCollection(_ collection: BookCollection) -> String {
