@@ -15,15 +15,14 @@ struct BookCoverCard: View {
                     .font(VarqTypography.uiMedium(.headline))
                     .foregroundStyle(Color.varqInkLight)
                     .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(verbatim: book.author)
                     .font(VarqTypography.ui(.subheadline))
                     .foregroundStyle(Color.varqTerracotta)
                     .lineLimit(1)
             }
-            // Keep glyph overhang inside the card; long metadata must never be clipped at its leading edge.
-            .padding(.horizontal, VarqSpacing.compact)
+            // Pad both edges so glyph overhang stays inside the card bounds.
+            .padding(.horizontal, VarqSpacing.regular)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.bottom, VarqSpacing.compact)
