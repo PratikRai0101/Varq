@@ -10,17 +10,21 @@ struct BookCoverCard: View {
                 .aspectRatio(0.68, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.compact))
 
-            Text(book.title)
-                .font(VarqTypography.uiMedium(.headline))
-                .foregroundStyle(Color.varqInkLight)
-                .lineLimit(2, reservesSpace: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: VarqSpacing.compact) {
+                Text(verbatim: book.title)
+                    .font(VarqTypography.uiMedium(.headline))
+                    .foregroundStyle(Color.varqInkLight)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            Text(book.author)
-                .font(VarqTypography.ui(.subheadline))
-                .foregroundStyle(Color.varqTerracotta)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                Text(verbatim: book.author)
+                    .font(VarqTypography.ui(.subheadline))
+                    .foregroundStyle(Color.varqTerracotta)
+                    .lineLimit(1)
+            }
+            // Keep glyph overhang inside the card; long metadata must never be clipped at its leading edge.
+            .padding(.horizontal, VarqSpacing.compact)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(book.title) by \(book.author)")
