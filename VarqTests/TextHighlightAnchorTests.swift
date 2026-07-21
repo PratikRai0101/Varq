@@ -22,17 +22,18 @@ struct TextHighlightAnchorTests {
         #expect(decoded == anchor)
     }
 
-    @Test func supportsPdfPageTextOffsets() throws {
+    @Test func supportsACoarsePdfPageAnchor() throws {
         let locator = try BookLocator(format: .pdf, spineIndex: 4, progression: 0)
 
         let anchor = try TextHighlightAnchor(
-            locator: locator,
-            startOffset: 0,
-            endOffset: 8,
+            coarsePDFLocator: locator,
+            approximatePosition: 0.4,
             quote: TextQuoteSelector(exact: "PDF text")
         )
 
-        #expect(anchor.locator.format == .pdf)
+        #expect(anchor.precision == .coarsePagePosition)
+        #expect(anchor.approximatePosition == 0.4)
+        #expect(try JSONDecoder().decode(TextHighlightAnchor.self, from: JSONEncoder().encode(anchor)) == anchor)
     }
 
     @Test func rejectsComicAndInvalidTextRanges() throws {

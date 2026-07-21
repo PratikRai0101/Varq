@@ -54,7 +54,7 @@ Book file handling must account for App Sandbox constraints — `ImportService` 
 
 - Keep each supported format behind a native macOS reader-engine component: PDFKit for PDFs, WebKit plus EPUB parsing for EPUBs, and archive image decoding for CBZ comics.
 - Follow `docs/adr/0003-use-css-columns-for-epub-pagination.md` for the `BookRenderer` interface and the versioned `BookLocator` schema. `ReaderViewModel` coordinates that interface; it must not expose WebKit or PDFKit types to SwiftData models or Views.
-- `BookLocator` is the canonical serialized representation of "where in the book" for `ReadingProgress`. `Highlight` stores the separate, versioned `TextHighlightAnchor` contract from `docs/adr/0004-store-text-highlights-as-versioned-range-anchors.md`, which contains a `BookLocator` plus a text range and quote selector.
+- `BookLocator` is the canonical serialized representation of "where in the book" for `ReadingProgress`. `Highlight` stores the separate, versioned `TextHighlightAnchor` contract from `docs/adr/0004-store-text-highlights-as-versioned-range-anchors.md`, which contains a `BookLocator` plus a text range and quote selector. EPUB anchors are exact; PDF uses the explicitly coarse page-position fallback in `docs/adr/0005-use-coarse-pdf-highlight-anchors.md`.
 - Validate EPUB and CBZ navigation with small permissively licensed fixtures before building a custom `ReaderView`. CBR is deferred to v1.1+ under the decision recorded in `docs/PRD.md` section 8.
 
 ## Import pipeline
