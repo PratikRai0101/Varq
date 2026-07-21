@@ -40,10 +40,7 @@ final class SystemKeychainItemAccess: KeychainItemAccessing {
 
     func storeKeyData(_ data: Data, account: String) throws {
         try removeKeyData(account: account)
-        var accessControlError: Unmanaged<CFError>?
-        guard let accessControl = SecAccessControlCreateWithFlags(nil, kSecAttrAccessibleWhenUnlockedThisDeviceOnly, .biometryCurrentSet, &accessControlError) else {
-            throw accessControlError?.takeRetainedValue() ?? PrivateBookKeyStoreError.accessControlCreationFailed
-        }
+        let accessControl = try createAccessControl()
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: serviceIdentifier,
@@ -53,6 +50,18 @@ final class SystemKeychainItemAccess: KeychainItemAccessing {
         ]
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else { throw PrivateBookKeyStoreError.keychainStatus(status) }
+    }
+
+    private func createAccessControl() throws -> SecAccessControl {
+        var accessControlError: Unmanaged<CFError>?
+        let context = LAContext()
+        var error: NSError?
+        let biometricsAvailable = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+        let flags: SecAccessControlCreateFlags = biometricsAvailable ? .biometryCurrentSet : .userPresence
+        guard let accessControl = SecAccessControlCreateWithFlags(nil, kSecAttrAccessibleWhenUnlockedThisDeviceOnly, flags, &accessControlError) else {
+            throw accessControlError?.takeRetainedValue() ?? PrivateBookKeyStoreError.accessControlCreationFailed
+        }
+        return accessControl
     }
 
     func keyData(account: String, authenticationPrompt: String) throws -> Data {
