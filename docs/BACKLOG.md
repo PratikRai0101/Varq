@@ -47,7 +47,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 ## Phase 6 — CBZ comics/manga mode
 - [x] CBZ-specific reader path (image sequence, not the text reader engine)
 - [x] Right-to-left toggle
-- [ ] Dual-page spread option
+- [x] Dual-page spread option
 - [ ] Page-fit options (fit width / fit height / actual size)
 
 ## Phase 7 — Highlights & notes

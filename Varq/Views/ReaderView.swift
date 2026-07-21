@@ -69,8 +69,12 @@ struct ReaderView: View {
                 ToolbarItem {
                     ComicReadingControls(
                         readingDirection: viewModel.readingAppearance.comicReadingDirection,
+                        pageLayout: viewModel.readingAppearance.comicPageLayout,
                         setReadingDirection: { readingDirection in
                             Task { await viewModel.setComicReadingDirection(readingDirection) }
+                        },
+                        setPageLayout: { pageLayout in
+                            Task { await viewModel.setComicPageLayout(pageLayout) }
                         }
                     )
                 }

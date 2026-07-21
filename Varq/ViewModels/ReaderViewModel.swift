@@ -52,6 +52,12 @@ final class ReaderViewModel {
         await updateReadingAppearance(appearance)
     }
 
+    func setComicPageLayout(_ pageLayout: ComicPageLayout) async {
+        var appearance = readingAppearance
+        appearance.comicPageLayout = pageLayout
+        await updateReadingAppearance(appearance)
+    }
+
     func setPageTone(_ pageTone: ReaderPageTone) async {
         var appearance = readingAppearance
         appearance.pageTone = pageTone

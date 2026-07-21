@@ -42,6 +42,7 @@ struct ReaderViewModelTests {
 
         await viewModel.setPageTone(.dark)
         await viewModel.setComicReadingDirection(.rightToLeft)
+        await viewModel.setComicPageLayout(.dualPage)
         await viewModel.setFontSize(ReadingAppearance.maximumFontSize)
         await viewModel.setLineHeight(1.9)
         await viewModel.setHorizontalMargin(ReadingAppearance.maximumHorizontalMargin)
@@ -49,6 +50,7 @@ struct ReaderViewModelTests {
 
         #expect(viewModel.readingAppearance.pageTone == .dark)
         #expect(viewModel.readingAppearance.comicReadingDirection == .rightToLeft)
+        #expect(viewModel.readingAppearance.comicPageLayout == .dualPage)
         #expect(viewModel.readingAppearance.fontSize == ReadingAppearance.maximumFontSize)
         #expect(viewModel.readingAppearance.lineHeight == 1.9)
         #expect(viewModel.readingAppearance.horizontalMargin == ReadingAppearance.maximumHorizontalMargin)

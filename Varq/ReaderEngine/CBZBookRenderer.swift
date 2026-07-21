@@ -5,35 +5,68 @@ import Foundation
 protocol CBZPageView: AnyObject {
     var renderedView: NSView { get }
 
-    func displayImage(at fileURL: URL) throws
+    func displayImages(at fileURLs: [URL]) throws
     func clearImage()
 }
 
 @MainActor
-final class CBZImageView: NSImageView, CBZPageView {
+final class CBZImageView: NSView, CBZPageView {
+    private let imageViews = [NSImageView(), NSImageView()]
+    private let stackView: NSStackView
+
     var renderedView: NSView { self }
 
     override init(frame frameRect: NSRect) {
+        stackView = NSStackView(views: imageViews)
         super.init(frame: frameRect)
-        imageScaling = .scaleProportionallyUpOrDown
-        imageAlignment = .alignCenter
+        configureStackView()
     }
 
     required init?(coder: NSCoder) {
+        stackView = NSStackView(views: imageViews)
         super.init(coder: coder)
-        imageScaling = .scaleProportionallyUpOrDown
-        imageAlignment = .alignCenter
+        configureStackView()
     }
 
-    func displayImage(at fileURL: URL) throws {
-        guard let image = NSImage(contentsOf: fileURL) else {
-            throw BookRendererError.cannotOpenDocument
+    func displayImages(at fileURLs: [URL]) throws {
+        guard !fileURLs.isEmpty, fileURLs.count <= imageViews.count else {
+            throw BookRendererError.invalidLocator
         }
-        self.image = image
+        let images = try fileURLs.map { fileURL -> NSImage in
+            guard let image = NSImage(contentsOf: fileURL) else {
+                throw BookRendererError.cannotOpenDocument
+            }
+            return image
+        }
+
+        for (index, imageView) in imageViews.enumerated() {
+            imageView.image = images.indices.contains(index) ? images[index] : nil
+            imageView.isHidden = !images.indices.contains(index)
+        }
     }
 
     func clearImage() {
-        image = nil
+        for imageView in imageViews {
+            imageView.image = nil
+            imageView.isHidden = true
+        }
+    }
+
+    private func configureStackView() {
+        for imageView in imageViews {
+            imageView.imageScaling = .scaleProportionallyUpOrDown
+            imageView.imageAlignment = .alignCenter
+        }
+        stackView.orientation = .horizontal
+        stackView.distribution = .fillEqually
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stackView)
+        NSLayoutConstraint.activate([
+            stackView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stackView.topAnchor.constraint(equalTo: topAnchor),
+            stackView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
     }
 }
 
@@ -43,6 +76,7 @@ final class CBZBookRenderer: BookRenderer {
     private let publicationService: CbzPublicationService
     private var publication: CbzPublication?
     private var readingDirection: ComicReadingDirection = .leftToRight
+    private var pageLayout: ComicPageLayout = .singlePage
     private(set) var currentLocator: BookLocator?
 
     var view: NSView { pageView.renderedView }
@@ -82,6 +116,10 @@ final class CBZBookRenderer: BookRenderer {
 
     func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
         readingDirection = appearance.comicReadingDirection
+        pageLayout = appearance.comicPageLayout
+        if let currentLocator {
+            try await go(to: currentLocator)
+        }
     }
 
     func close() async {
@@ -114,7 +152,7 @@ final class CBZBookRenderer: BookRenderer {
         guard locator.resourceHref == nil || locator.resourceHref == page.archivePath else {
             throw BookRendererError.invalidLocator
         }
-        try pageView.displayImage(at: page.fileURL)
+        try pageView.displayImages(at: visiblePageURLs(startingAt: locator.spineIndex, in: publication))
         currentLocator = try pageLocator(for: locator.spineIndex, in: publication)
     }
 
@@ -123,12 +161,27 @@ final class CBZBookRenderer: BookRenderer {
               let publication else {
             return false
         }
-        let destinationIndex = currentLocator.spineIndex + offset
+        let destinationIndex = currentLocator.spineIndex + (offset * pageStride)
         guard publication.pages.indices.contains(destinationIndex) else {
             return false
         }
         try await go(to: pageLocator(for: destinationIndex, in: publication))
         return true
+    }
+
+    private var pageStride: Int {
+        pageLayout == .dualPage ? 2 : 1
+    }
+
+    private func visiblePageURLs(startingAt pageIndex: Int, in publication: CbzPublication) -> [URL] {
+        switch readingDirection {
+        case .leftToRight:
+            let indexes = [pageIndex, pageIndex + 1].prefix(pageStride)
+            return indexes.compactMap { publication.pages.indices.contains($0) ? publication.pages[$0].fileURL : nil }
+        case .rightToLeft:
+            let indexes = [pageIndex - 1, pageIndex].suffix(pageStride)
+            return indexes.compactMap { publication.pages.indices.contains($0) ? publication.pages[$0].fileURL : nil }
+        }
     }
 
     private func pageLocator(for pageIndex: Int, in publication: CbzPublication) throws -> BookLocator {

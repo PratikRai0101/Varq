@@ -25,6 +25,17 @@ struct CBZBookRendererTests {
         #expect(renderer.currentLocator?.spineIndex == 0)
     }
 
+    @Test func displaysTwoPagesForADualPageSpread() async throws {
+        let pageView = FakeCBZPageView()
+        let renderer = CBZBookRenderer(pageView: pageView)
+        try await renderer.open(bookURL: fixtureURL, at: nil)
+
+        try await renderer.updateReadingAppearance(ReadingAppearance(comicPageLayout: .dualPage))
+
+        #expect(pageView.displayedURLs.map(\.lastPathComponent) == ["001.png", "002.png"])
+        #expect(!(try await renderer.goForward()))
+    }
+
     @Test func reversesNavigationForRightToLeftComics() async throws {
         let pageView = FakeCBZPageView()
         let renderer = CBZBookRenderer(pageView: pageView)
@@ -60,12 +71,15 @@ struct CBZBookRendererTests {
 private final class FakeCBZPageView: CBZPageView {
     let renderedView = NSView()
     private(set) var displayedURL: URL?
+    private(set) var displayedURLs: [URL] = []
 
-    func displayImage(at fileURL: URL) throws {
-        displayedURL = fileURL
+    func displayImages(at fileURLs: [URL]) throws {
+        displayedURLs = fileURLs
+        displayedURL = fileURLs.last
     }
 
     func clearImage() {
         displayedURL = nil
+        displayedURLs = []
     }
 }
