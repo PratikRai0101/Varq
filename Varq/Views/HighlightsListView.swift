@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HighlightsListView: View {
     let book: Book
+    @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = HighlightsViewModel()
 
     var body: some View {
@@ -17,12 +18,12 @@ struct HighlightsListView: View {
                                 .frame(width: VarqSpacing.compact, height: VarqSpacing.compact)
                             Text(highlight.selectedText)
                                 .font(VarqTypography.reading())
-                                .foregroundStyle(Color.varqInkLight)
+                                .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
                         }
                         if let note = highlight.note {
                             Text(note)
                                 .font(VarqTypography.ui(.body))
-                                .foregroundStyle(Color.varqInkLight)
+                                .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
                         }
                     }
                     .padding(.vertical, VarqSpacing.compact)
@@ -31,7 +32,7 @@ struct HighlightsListView: View {
             }
         }
         .padding(VarqSpacing.regular)
-        .background(Color.varqParchment)
+        .background(colorScheme == .dark ? Color.varqIndigo : Color.varqParchment)
         .navigationTitle("Highlights")
         .task { viewModel.load(for: book) }
     }

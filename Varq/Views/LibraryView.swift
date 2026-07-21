@@ -4,6 +4,7 @@ import SwiftUI
 
 struct LibraryView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     @State private var libraryViewModel = LibraryViewModel()
     @State private var isDropTargeted = false
     @State private var privateBookViewModel = PrivateBookViewModel()
@@ -123,8 +124,8 @@ struct LibraryView: View {
             }
         }
         .padding(VarqSpacing.large)
-        .foregroundStyle(Color.varqInkLight)
-        .background(isDropTargeted ? Color.varqParchmentDeep : .varqParchment)
+        .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
+        .background(isDropTargeted ? (colorScheme == .dark ? Color.varqIndigoLight : Color.varqParchmentDeep) : (colorScheme == .dark ? Color.varqIndigo : Color.varqParchment))
         .navigationTitle(libraryViewModel.selectedCollection?.name ?? "Library")
         .toolbar {
             ToolbarItem {

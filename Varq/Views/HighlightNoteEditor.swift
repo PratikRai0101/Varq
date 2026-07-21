@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HighlightNoteEditor: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     let highlight: Highlight
     let saveNote: (String) -> Void
     @State private var note: String
@@ -16,18 +17,18 @@ struct HighlightNoteEditor: View {
         VStack(alignment: .leading, spacing: VarqSpacing.regular) {
             Text("Add a note")
                 .font(VarqTypography.uiMedium(.headline))
-                .foregroundStyle(Color.varqInkLight)
+                .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
 
             Text(highlight.selectedText)
                 .font(VarqTypography.reading())
-                .foregroundStyle(Color.varqInkLight)
+                .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
                 .lineLimit(3)
 
             TextEditor(text: $note)
                 .font(VarqTypography.ui(.body))
                 .scrollContentBackground(.hidden)
                 .padding(VarqSpacing.compact)
-                .background(Color.varqParchmentDeep)
+                .background(colorScheme == .dark ? Color.varqIndigoLight : Color.varqParchmentDeep)
 
             HStack {
                 Button("Cancel", role: .cancel, action: dismiss.callAsFunction)
@@ -40,7 +41,7 @@ struct HighlightNoteEditor: View {
             }
         }
         .padding(VarqSpacing.large)
-        .background(Color.varqParchment)
+        .background(colorScheme == .dark ? Color.varqIndigo : Color.varqParchment)
         .frame(minWidth: VarqLayout.noteEditorMinimumWidth, minHeight: VarqLayout.noteEditorMinimumHeight)
     }
 }
