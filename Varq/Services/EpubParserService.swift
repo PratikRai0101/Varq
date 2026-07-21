@@ -63,11 +63,12 @@ actor EpubParserService {
     }
 
     private func resolvedArchivePath(_ relativePath: String, relativeTo packagePath: String) -> String {
+        let pathWithoutFragment = relativePath.split(separator: "#", maxSplits: 1).first.map(String.init) ?? relativePath
         let packageDirectory = packagePath
             .split(separator: "/")
             .dropLast()
             .joined(separator: "/")
-        let absolutePath = "/" + packageDirectory + "/" + relativePath
+        let absolutePath = "/" + packageDirectory + "/" + pathWithoutFragment
         return URL(fileURLWithPath: absolutePath)
             .standardizedFileURL
             .path
@@ -108,6 +109,7 @@ private struct PackageDocument {
 private struct ManifestItem {
     let href: String
     let properties: String
+    let mediaType: String
 }
 
 private final class PackageDocumentDelegate: NSObject, XMLParserDelegate {
@@ -117,6 +119,7 @@ private final class PackageDocumentDelegate: NSObject, XMLParserDelegate {
     private var author: String?
     private var coverIdentifier: String?
     private var manifestItems: [String: ManifestItem] = [:]
+    private var guideCoverHref: String?
     private var activeTextElement: String?
     private var activeText = ""
 
@@ -142,8 +145,11 @@ private final class PackageDocumentDelegate: NSObject, XMLParserDelegate {
             }
             manifestItems[identifier] = ManifestItem(
                 href: href,
-                properties: attributeDict["properties"] ?? ""
+                properties: attributeDict["properties"] ?? "",
+                mediaType: attributeDict["media-type"] ?? ""
             )
+        case "reference" where attributeDict["type"] == "cover":
+            guideCoverHref = attributeDict["href"]
         default:
             break
         }
@@ -177,14 +183,55 @@ private final class PackageDocumentDelegate: NSObject, XMLParserDelegate {
     }
 
     func parserDidEndDocument(_ parser: XMLParser) {
-        let coverItem = manifestItems.values.first {
-            $0.properties.split(separator: " ").contains("cover-image")
-        } ?? coverIdentifier.flatMap { manifestItems[$0] }
+        let coverPath = resolveCoverPath()
         packageDocument = PackageDocument(
             title: title,
             author: author,
-            coverPath: coverItem?.href
+            coverPath: coverPath
         )
+    }
+
+    private func resolveCoverPath() -> String? {
+        // 1. EPUB 3 cover-image property on manifest item
+        if let item = manifestItems.values.first(where: {
+            $0.properties.split(separator: " ").contains("cover-image")
+        }) {
+            return item.href
+        }
+
+        // 2. EPUB 2 meta name="cover" referencing manifest item id
+        if let id = coverIdentifier, let item = manifestItems[id] {
+            return item.href
+        }
+
+        // 3. Guide reference with type="cover"
+        if let href = guideCoverHref {
+            return href
+        }
+
+        // 4. Fallback: manifest item with "cover" in its href and image-like media-type
+        let imageMediaTypes: Set<String> = [
+            "image/jpeg", "image/jpg", "image/png", "image/gif",
+            "image/svg+xml", "image/webp", "image/avif"
+        ]
+        let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "gif", "svg", "webp", "avif"]
+        if let item = manifestItems.values.first(where: {
+            let lowerHref = $0.href.lowercased()
+            return lowerHref.contains("cover") &&
+                   (imageMediaTypes.contains($0.mediaType.lowercased()) ||
+                    imageExtensions.contains(URL(fileURLWithPath: $0.href).pathExtension.lowercased()))
+        }) {
+            return item.href
+        }
+
+        // 5. Last resort: any manifest item with image media-type that contains "cover" in href
+        if let item = manifestItems.values.first(where: {
+            $0.href.lowercased().contains("cover")
+        }) {
+            return item.href
+        }
+
+        return nil
     }
 
     private func normalizedText(_ text: String) -> String? {
