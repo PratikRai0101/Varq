@@ -2,28 +2,34 @@ import AppKit
 import SwiftUI
 
 struct BookCoverCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let book: Book
 
     var body: some View {
         VStack(alignment: .leading, spacing: VarqSpacing.compact) {
             cover
             progressIndicator
+                .opacity(book.readingProgress == nil ? 0 : 1)
+                .accessibilityHidden(book.readingProgress == nil)
 
             VStack(alignment: .leading, spacing: VarqSpacing.compact) {
                 Text(verbatim: book.title)
                     .font(VarqTypography.uiMedium(.headline))
-                    .foregroundStyle(Color.varqInkLight)
+                    .foregroundStyle(colorScheme == .dark ? Color.white : Color.varqInkLight)
                     .lineLimit(2, reservesSpace: true)
 
                 Text(verbatim: book.author)
                     .font(VarqTypography.ui(.subheadline))
-                    .foregroundStyle(Color.varqTerracotta)
+                    .foregroundStyle(colorScheme == .dark ? Color.varqSaffron : Color.varqTerracotta)
                     .lineLimit(1, reservesSpace: true)
 
                 Text("\(Int(progressValue * 100))% complete")
                     .font(VarqTypography.ui(.caption))
                     .foregroundStyle(Color.varqSaffron)
                     .lineLimit(1, reservesSpace: true)
+                    .opacity(book.readingProgress == nil ? 0 : 1)
+                    .accessibilityHidden(book.readingProgress == nil)
             }
             // Pad both edges so glyph overhang stays inside the card bounds.
             .padding(.horizontal, VarqSpacing.regular)
