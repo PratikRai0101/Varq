@@ -1,1 +1,1 @@
-`minimal.epub` is a self-authored EPUB fixture containing only synthetic metadata, a one-pixel PNG cover, and a short fixture chapter. It is available under this repository's MIT license.
+`minimal.epub` is a self-authored EPUB fixture containing only synthetic metadata, a one-pixel PNG cover, and a short fixture chapter. `pagination.epub` is a self-authored EPUB fixture containing 180 synthetic paragraphs for WebKit CSS-column pagination validation. Both are available under this repository's MIT license.
