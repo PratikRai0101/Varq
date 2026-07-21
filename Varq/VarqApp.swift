@@ -10,6 +10,8 @@ import SwiftData
 
 @main
 struct VarqApp: App {
+    @NSApplicationDelegateAdaptor(VarqAppDelegate.self) var appDelegate
+
     let importViewModel: ImportViewModel
     let managedLibraryDirectory: URL
 
