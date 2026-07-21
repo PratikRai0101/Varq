@@ -19,6 +19,18 @@ struct PDFBookRendererTests {
         #expect(renderer.currentLocator == firstPageLocator)
     }
 
+    @Test func createsACoarseHighlightAnchorFromSelectedPdfText() async throws {
+        let navigationView = FakePDFNavigationView()
+        navigationView.selectedText = "Selected PDF passage"
+        let renderer = PDFBookRenderer(navigationView: navigationView)
+        try await renderer.open(bookURL: pdfFixtureURL, at: nil)
+
+        let anchor = try #require(try await renderer.selectedTextHighlightAnchor())
+
+        #expect(anchor.precision == .coarsePagePosition)
+        #expect(anchor.quote.exact == "Selected PDF passage")
+    }
+
     @Test func appliesTheSelectedPageToneToThePdfView() async throws {
         let navigationView = FakePDFNavigationView()
         let renderer = PDFBookRenderer(navigationView: navigationView)
@@ -53,6 +65,7 @@ struct PDFBookRendererTests {
 @MainActor
 private final class FakePDFNavigationView: NSView, PDFNavigationView {
     var document: PDFDocument?
+    var selectedText: String?
     private(set) var displayedPage: PDFPage?
     private(set) var pageTone: ReaderPageTone?
 

@@ -6,6 +6,7 @@ import SwiftUI
 protocol PDFNavigationView: AnyObject {
     var renderedView: NSView { get }
     var document: PDFDocument? { get set }
+    var selectedText: String? { get }
 
     func go(to page: PDFPage)
     func setPageTone(_ pageTone: ReaderPageTone)
@@ -13,6 +14,7 @@ protocol PDFNavigationView: AnyObject {
 
 extension PDFView: PDFNavigationView {
     var renderedView: NSView { self }
+    var selectedText: String? { currentSelection?.string }
 
     func setPageTone(_ pageTone: ReaderPageTone) {
         switch pageTone {
@@ -27,7 +29,7 @@ extension PDFView: PDFNavigationView {
 }
 
 @MainActor
-final class PDFBookRenderer: BookRenderer {
+final class PDFBookRenderer: BookRenderer, TextSelectionProviding {
     private let navigationView: any PDFNavigationView
     private(set) var currentLocator: BookLocator?
 
@@ -66,6 +68,19 @@ final class PDFBookRenderer: BookRenderer {
             progression: 0
         )
         try await go(to: initialLocator)
+    }
+
+    func selectedTextHighlightAnchor() async throws -> TextHighlightAnchor? {
+        guard let currentLocator,
+              let selectedText = navigationView.selectedText?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !selectedText.isEmpty else {
+            return nil
+        }
+        return try TextHighlightAnchor(
+            coarsePDFLocator: currentLocator,
+            approximatePosition: 0.5,
+            quote: TextQuoteSelector(exact: selectedText)
+        )
     }
 
     func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
