@@ -40,11 +40,13 @@ struct ReaderViewModelTests {
         let renderer = FakeBookRenderer(locator: locator)
         let viewModel = ReaderViewModel(book: book(), bookURL: bookURL, renderer: renderer)
 
+        await viewModel.setPageTone(.dark)
         await viewModel.setFontSize(ReadingAppearance.maximumFontSize)
         await viewModel.setLineHeight(1.9)
         await viewModel.setHorizontalMargin(ReadingAppearance.maximumHorizontalMargin)
         await viewModel.setFontFamily(.newYork)
 
+        #expect(viewModel.readingAppearance.pageTone == .dark)
         #expect(viewModel.readingAppearance.fontSize == ReadingAppearance.maximumFontSize)
         #expect(viewModel.readingAppearance.lineHeight == 1.9)
         #expect(viewModel.readingAppearance.horizontalMargin == ReadingAppearance.maximumHorizontalMargin)

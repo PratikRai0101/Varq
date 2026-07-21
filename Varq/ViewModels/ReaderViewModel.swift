@@ -45,6 +45,12 @@ final class ReaderViewModel {
         await navigate { try await renderer.goBackward() }
     }
 
+    func setPageTone(_ pageTone: ReaderPageTone) async {
+        var appearance = readingAppearance
+        appearance.pageTone = pageTone
+        await updateReadingAppearance(appearance)
+    }
+
     func setFontFamily(_ fontFamily: ReadingFontFamily) async {
         var appearance = readingAppearance
         appearance.fontFamily = fontFamily

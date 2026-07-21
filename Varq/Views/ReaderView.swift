@@ -61,6 +61,9 @@ struct ReaderView: View {
             ToolbarItem {
                 ReaderAppearanceControls(
                     appearance: viewModel.readingAppearance,
+                    setPageTone: { pageTone in
+                        Task { await viewModel.setPageTone(pageTone) }
+                    },
                     setFontFamily: { fontFamily in
                         Task { await viewModel.setFontFamily(fontFamily) }
                     },

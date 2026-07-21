@@ -41,7 +41,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] `ReaderView`: paginated rendering, arrow key + trackpad swipe navigation
 - [x] Persist reading position to `ReadingProgress` on navigation/close
 - [x] Typography controls (font size, line height, margins) wired to live re-render
-- [ ] Light / dark / sepia page-tone modes (independent toggle per `design-system.md`)
+- [x] Light / dark / sepia page-tone modes (independent toggle per `design-system.md`)
 - [ ] Custom warm-toned page-turn animation
 
 ## Phase 6 — CBZ comics/manga mode

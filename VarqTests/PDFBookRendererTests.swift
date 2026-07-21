@@ -19,6 +19,15 @@ struct PDFBookRendererTests {
         #expect(renderer.currentLocator == firstPageLocator)
     }
 
+    @Test func appliesTheSelectedPageToneToThePdfView() async throws {
+        let navigationView = FakePDFNavigationView()
+        let renderer = PDFBookRenderer(navigationView: navigationView)
+
+        try await renderer.updateReadingAppearance(ReadingAppearance(pageTone: .dark))
+
+        #expect(navigationView.pageTone == .dark)
+    }
+
     @Test func rejectsAnEpubLocator() async throws {
         let renderer = PDFBookRenderer(navigationView: FakePDFNavigationView())
         try await renderer.open(bookURL: pdfFixtureURL, at: nil)
@@ -45,10 +54,15 @@ struct PDFBookRendererTests {
 private final class FakePDFNavigationView: NSView, PDFNavigationView {
     var document: PDFDocument?
     private(set) var displayedPage: PDFPage?
+    private(set) var pageTone: ReaderPageTone?
 
     var renderedView: NSView { self }
 
     func go(to page: PDFPage) {
         displayedPage = page
+    }
+
+    func setPageTone(_ pageTone: ReaderPageTone) {
+        self.pageTone = pageTone
     }
 }

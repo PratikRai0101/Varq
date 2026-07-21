@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ReaderAppearanceControls: View {
     let appearance: ReadingAppearance
+    let setPageTone: (ReaderPageTone) -> Void
     let setFontFamily: (ReadingFontFamily) -> Void
     let setFontSize: (Double) -> Void
     let setLineHeight: (Double) -> Void
@@ -9,6 +10,12 @@ struct ReaderAppearanceControls: View {
 
     var body: some View {
         Menu("Appearance", systemImage: "textformat") {
+            Picker("Page tone", selection: pageTone) {
+                ForEach(ReaderPageTone.allCases, id: \.self) { pageTone in
+                    Text(pageTone.displayName).tag(pageTone)
+                }
+            }
+
             Picker("Font", selection: fontFamily) {
                 ForEach(ReadingFontFamily.allCases, id: \.self) { fontFamily in
                     Text(fontFamily.displayName).tag(fontFamily)
@@ -25,6 +32,10 @@ struct ReaderAppearanceControls: View {
 
             Stepper("Margins: \(Int(appearance.horizontalMargin)) pt", value: horizontalMargin, in: horizontalMarginRange, step: ReadingAppearance.horizontalMarginStep)
         }
+    }
+
+    private var pageTone: Binding<ReaderPageTone> {
+        Binding(get: { appearance.pageTone }, set: setPageTone)
     }
 
     private var fontFamily: Binding<ReadingFontFamily> {

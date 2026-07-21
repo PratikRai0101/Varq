@@ -1,5 +1,6 @@
 import AppKit
 import PDFKit
+import SwiftUI
 
 @MainActor
 protocol PDFNavigationView: AnyObject {
@@ -7,10 +8,22 @@ protocol PDFNavigationView: AnyObject {
     var document: PDFDocument? { get set }
 
     func go(to page: PDFPage)
+    func setPageTone(_ pageTone: ReaderPageTone)
 }
 
 extension PDFView: PDFNavigationView {
     var renderedView: NSView { self }
+
+    func setPageTone(_ pageTone: ReaderPageTone) {
+        switch pageTone {
+        case .light:
+            backgroundColor = NSColor(Color.varqParchment)
+        case .dark:
+            backgroundColor = NSColor(Color.varqIndigo)
+        case .sepia:
+            backgroundColor = NSColor(Color.varqSepia)
+        }
+    }
 }
 
 @MainActor
@@ -48,7 +61,8 @@ final class PDFBookRenderer: BookRenderer {
     }
 
     func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
-        // PDFKit renders embedded PDF typography; it has no document-text typography controls.
+        // PDFKit renders embedded PDF typography, so only the native view's surrounding page tone changes.
+        navigationView.setPageTone(appearance.pageTone)
     }
 
     func close() async {

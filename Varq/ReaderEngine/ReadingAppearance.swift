@@ -1,5 +1,34 @@
 import Foundation
 
+enum ReaderPageTone: String, CaseIterable, Codable, Sendable {
+    case light
+    case dark
+    case sepia
+
+    var displayName: String {
+        switch self {
+        case .light: "Light"
+        case .dark: "Dark"
+        case .sepia: "Sepia"
+        }
+    }
+
+    var cssBackgroundColor: String {
+        switch self {
+        case .light: VarqWebColor.parchment
+        case .dark: VarqWebColor.indigo
+        case .sepia: VarqWebColor.sepia
+        }
+    }
+
+    var cssTextColor: String {
+        switch self {
+        case .light, .sepia: VarqWebColor.inkLight
+        case .dark: VarqWebColor.inkDark
+        }
+    }
+}
+
 enum ReadingFontFamily: String, CaseIterable, Codable, Sendable {
     case georgia
     case newYork
@@ -31,17 +60,20 @@ struct ReadingAppearance: Codable, Equatable, Sendable {
     static let maximumHorizontalMargin = 72.0
     static let horizontalMarginStep = 8.0
 
+    var pageTone: ReaderPageTone
     var fontFamily: ReadingFontFamily
     var fontSize: Double
     var lineHeight: Double
     var horizontalMargin: Double
 
     init(
+        pageTone: ReaderPageTone = .sepia,
         fontFamily: ReadingFontFamily = .georgia,
         fontSize: Double = Self.defaultFontSize,
         lineHeight: Double = Self.defaultLineHeight,
         horizontalMargin: Double = Self.defaultHorizontalMargin
     ) {
+        self.pageTone = pageTone
         self.fontFamily = fontFamily
         self.fontSize = fontSize
         self.lineHeight = lineHeight

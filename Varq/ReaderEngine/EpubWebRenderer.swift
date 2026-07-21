@@ -206,8 +206,8 @@ final class EpubWebRenderer: NSObject, BookRenderer, WKNavigationDelegate {
                 document.head.appendChild(style);
             }
             style.textContent = `
-                html { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; }
-                body { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; box-sizing: border-box !important; column-width: ${width}px !important; column-gap: 0 !important; column-fill: auto !important; padding-left: \(appearance.horizontalMargin)px !important; padding-right: \(appearance.horizontalMargin)px !important; font-family: \(appearance.fontFamily.cssFamily) !important; font-size: \(appearance.fontSize)px !important; line-height: \(appearance.lineHeight) !important; }
+                html { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; background: \(appearance.pageTone.cssBackgroundColor) !important; }
+                body { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; box-sizing: border-box !important; column-width: ${width}px !important; column-gap: 0 !important; column-fill: auto !important; padding-left: \(appearance.horizontalMargin)px !important; padding-right: \(appearance.horizontalMargin)px !important; background: \(appearance.pageTone.cssBackgroundColor) !important; color: \(appearance.pageTone.cssTextColor) !important; font-family: \(appearance.fontFamily.cssFamily) !important; font-size: \(appearance.fontSize)px !important; line-height: \(appearance.lineHeight) !important; }
             `;
             return true;
         })();
