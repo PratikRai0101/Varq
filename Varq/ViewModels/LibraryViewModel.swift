@@ -32,7 +32,8 @@ final class LibraryViewModel {
     }
 
     private func sortBooks() {
-        books.sort { lhs, rhs in
+        // Assign a newly sorted value so SwiftUI observation publishes the grid update.
+        books = books.sorted { lhs, rhs in
             switch sortOrder {
             case .title: lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
             case .author: lhs.author.localizedCaseInsensitiveCompare(rhs.author) == .orderedAscending
