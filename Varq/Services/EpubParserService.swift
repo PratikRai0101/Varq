@@ -14,14 +14,17 @@ actor EpubParserService {
         let packagePath = try parsePackagePath(from: containerData)
         let packageData = try extractData(from: archive, at: packagePath)
         let package = try parsePackage(from: packageData)
-        let coverImageData = try package.coverPath.map {
-            try extractData(from: archive, at: resolvedArchivePath($0, relativeTo: packagePath))
+        let coverImageData: Data?
+        if let coverPath = package.coverPath {
+            coverImageData = try? extractDataWithFallback(from: archive, at: resolvedArchivePath(coverPath, relativeTo: packagePath))
+        } else {
+            coverImageData = nil
         }
 
         return EpubMetadata(
             title: package.title ?? fileURL.deletingPathExtension().lastPathComponent,
             author: package.author ?? "Unknown Author",
-            coverImageData: coverImageData
+            coverImageData: coverImageData ?? scanArchiveForCoverImage(archive)
         )
     }
 
@@ -35,6 +38,41 @@ actor EpubParserService {
             data.append(chunk)
         }
         return data
+    }
+
+    private func extractDataWithFallback(from archive: Archive, at path: String) throws -> Data {
+        do {
+            return try extractData(from: archive, at: path)
+        } catch EpubParserError.missingArchiveEntry {
+            // Try case-insensitive match and filename-only match
+            let lowerPath = path.lowercased()
+            let fileName = URL(fileURLWithPath: path).lastPathComponent.lowercased()
+            for entry in archive where entry.path.lowercased() == lowerPath || entry.path.lowercased().hasSuffix("/" + fileName) {
+                var data = Data()
+                try archive.extract(entry) { chunk in
+                    data.append(chunk)
+                }
+                return data
+            }
+            throw EpubParserError.missingArchiveEntry(path)
+        }
+    }
+
+    private func scanArchiveForCoverImage(_ archive: Archive) -> Data? {
+        let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "gif", "webp", "avif"]
+        let candidates = archive.filter { entry in
+            let ext = URL(fileURLWithPath: entry.path).pathExtension.lowercased()
+            let lowerPath = entry.path.lowercased()
+            return imageExtensions.contains(ext) && lowerPath.contains("cover")
+        }
+        guard let entry = candidates.min(by: { $0.path.count < $1.path.count }) else {
+            return nil
+        }
+        var data = Data()
+        try? archive.extract(entry) { chunk in
+            data.append(chunk)
+        }
+        return data.isEmpty ? nil : data
     }
 
     private func parsePackagePath(from containerData: Data) throws -> String {
