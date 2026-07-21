@@ -5,7 +5,7 @@ final class PrivateBookSessionService {
     private let cryptoService: PrivateBookCryptoService
     private let keyStore: any PrivateBookKeyStoring
     private let fileManager: FileManager
-    private var sessionDirectory: URL?
+    private var sessionDirectories: Set<URL> = []
     private var unlockedKeys: [UUID: SymmetricKey] = [:]
 
     init(
@@ -31,15 +31,21 @@ final class PrivateBookSessionService {
             .appendingPathComponent("Varq-Private-Session", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let decryptedURL = directory.appendingPathComponent(managedFileURL.lastPathComponent)
-        try cryptoService.decryptManagedFile(at: managedFileURL, to: decryptedURL, using: key)
-        sessionDirectory = directory
-        return decryptedURL
+        do {
+            try cryptoService.decryptManagedFile(at: managedFileURL, to: decryptedURL, using: key)
+            sessionDirectories.insert(directory)
+            return decryptedURL
+        } catch {
+            try? fileManager.removeItem(at: directory)
+            throw error
+        }
     }
 
     func closeSession() {
-        guard let sessionDirectory else { return }
-        try? fileManager.removeItem(at: sessionDirectory)
-        self.sessionDirectory = nil
+        for directory in sessionDirectories {
+            try? fileManager.removeItem(at: directory)
+        }
+        sessionDirectories.removeAll()
     }
 
     func endApplicationSession() {
