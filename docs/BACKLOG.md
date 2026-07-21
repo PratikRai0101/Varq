@@ -37,7 +37,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] Sort controls (title, author, date added, recently read)
 
 ## Phase 5 — Reader view core
-- [ ] `ReaderViewModel`: coordinates the reader engine, exposes current reading locator/position
+- [x] `ReaderViewModel`: coordinates the reader engine, exposes current reading locator/position
 - [ ] `ReaderView`: paginated rendering, arrow key + trackpad swipe navigation
 - [ ] Persist reading position to `ReadingProgress` on navigation/close
 - [ ] Typography controls (font size, line height, margins) wired to live re-render
