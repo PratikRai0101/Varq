@@ -234,11 +234,18 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
     }
 
     private func applyPaginationStyle() async throws {
-        _ = try await evaluate(script: """
+        let margin = appearance.horizontalMargin
+        let columns = appearance.epubPageLayout == .twoPageSpread ? 2 : 1
+        let columnGap = columns > 1 ? 48.0 : 0.0
+        let js = """
         (() => {
             const width = Math.max(window.innerWidth, 1);
             const height = Math.max(window.innerHeight, 1);
-            const columnWidth = width / \(appearance.epubPageLayout == .twoPageSpread ? 2 : 1);
+            const margin = \(margin);
+            const columns = \(columns);
+            const columnGap = \(columnGap);
+            const availableWidth = Math.max(width - 2 * margin, 1);
+            const columnWidth = Math.max((availableWidth - (columns - 1) * columnGap) / columns, 1);
             const existingStyle = document.getElementById('varq-pagination-style');
             const style = existingStyle || document.createElement('style');
             if (!existingStyle) {
@@ -246,15 +253,60 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
                 document.head.appendChild(style);
             }
             style.textContent = `
-                html { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; background: \(appearance.pageTone.cssBackgroundColor) !important; }
-                body { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; box-sizing: border-box !important; column-width: ${columnWidth}px !important; column-gap: 0 !important; column-fill: auto !important; padding-left: \(appearance.horizontalMargin)px !important; padding-right: \(appearance.horizontalMargin)px !important; background: \(appearance.pageTone.cssBackgroundColor) !important; color: \(appearance.pageTone.cssTextColor) !important; font-family: \(appearance.fontFamily.cssFamily) !important; font-size: \(appearance.fontSize)px !important; line-height: \(appearance.lineHeight) !important; }
-                body *, body *::before, body *::after { box-sizing: border-box !important; max-width: 100% !important; white-space: normal !important; }
-                p, li, blockquote, dd, td, th { overflow-wrap: break-word !important; }
-                img, svg, video, canvas { height: auto !important; max-width: 100% !important; }
+                html {
+                    width: ${width}px !important;
+                    height: ${height}px !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    overflow: hidden !important;
+                    background: \(appearance.pageTone.cssBackgroundColor) !important;
+                }
+                body {
+                    width: ${availableWidth}px !important;
+                    height: ${height}px !important;
+                    margin: 0 ${margin}px !important;
+                    padding: 0 !important;
+                    overflow: hidden !important;
+                    column-width: ${columnWidth}px !important;
+                    column-gap: ${columnGap}px !important;
+                    column-fill: auto !important;
+                    background: \(appearance.pageTone.cssBackgroundColor) !important;
+                    color: \(appearance.pageTone.cssTextColor) !important;
+                    font-family: \(appearance.fontFamily.cssFamily) !important;
+                    font-size: \(appearance.fontSize)px !important;
+                    line-height: \(appearance.lineHeight) !important;
+                    -webkit-hyphens: auto !important;
+                    orphans: 2 !important;
+                    widows: 2 !important;
+                }
+                body *, body *::before, body *::after {
+                    box-sizing: border-box !important;
+                    max-width: 100% !important;
+                    white-space: normal !important;
+                    float: none !important;
+                    position: static !important;
+                    clear: both !important;
+                }
+                p, li, blockquote, dd, td, th {
+                    overflow-wrap: break-word !important;
+                }
+                img, svg, video, canvas {
+                    max-width: 100% !important;
+                    max-height: 80% !important;
+                    height: auto !important;
+                    display: block !important;
+                    margin: 0.5em auto !important;
+                }
+                h1, h2, h3, h4, h5, h6 {
+                    break-inside: avoid !important;
+                    page-break-inside: avoid !important;
+                    -webkit-column-break-inside: avoid !important;
+                }
             `;
             return true;
         })();
-        """)
+        """
+        _ = try await evaluate(script: js)
     }
 
     private func paginationMetrics() async throws -> PaginationMetrics {
