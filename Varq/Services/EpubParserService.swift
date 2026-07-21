@@ -14,14 +14,11 @@ actor EpubParserService {
         let packagePath = try parsePackagePath(from: containerData)
         let packageData = try extractData(from: archive, at: packagePath)
         let package = try parsePackage(from: packageData)
-        let coverImageData: Data? = {
-            if let coverPath = package.coverPath,
-               let data = try? extractDataWithFallback(from: archive, at: resolvedArchivePath(coverPath, relativeTo: packagePath)),
-               isImageData(data) {
-                return data
-            }
-            return scanArchiveForCoverImage(archive)
-        }()
+        let coverImageData = coverImageData(
+            from: archive,
+            coverPath: package.coverPath,
+            packagePath: packagePath
+        )
 
         return EpubMetadata(
             title: package.title ?? fileURL.deletingPathExtension().lastPathComponent,
@@ -125,6 +122,45 @@ actor EpubParserService {
             return data.isEmpty ? nil : data
         }
         return nil
+    }
+
+    private func coverImageData(from archive: Archive, coverPath: String?, packagePath: String) -> Data? {
+        guard let coverPath else {
+            return scanArchiveForCoverImage(archive)
+        }
+
+        let coverArchivePath = resolvedArchivePath(coverPath, relativeTo: packagePath)
+        guard let coverData = try? extractDataWithFallback(from: archive, at: coverArchivePath) else {
+            return scanArchiveForCoverImage(archive)
+        }
+        if isImageData(coverData) {
+            return coverData
+        }
+        guard let imageHref = imageReference(in: coverData),
+              let imageData = try? extractDataWithFallback(
+                from: archive,
+                at: resolvedArchivePath(imageHref, relativeTo: coverArchivePath)
+              ),
+              isImageData(imageData) else {
+            return scanArchiveForCoverImage(archive)
+        }
+        return imageData
+    }
+
+    private func imageReference(in documentData: Data) -> String? {
+        guard let document = String(data: documentData, encoding: .utf8) else {
+            return nil
+        }
+        let pattern = #"<img\\b[^>]*\\bsrc\\s*=\\s*[\"']([^\"']+)[\"']"#
+        guard let expression = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return nil
+        }
+        let range = NSRange(document.startIndex..., in: document)
+        guard let match = expression.firstMatch(in: document, range: range),
+              let hrefRange = Range(match.range(at: 1), in: document) else {
+            return nil
+        }
+        return String(document[hrefRange])
     }
 
     private func parsePackagePath(from containerData: Data) throws -> String {
@@ -299,7 +335,15 @@ private final class PackageDocumentDelegate: NSObject, XMLParserDelegate {
             return href
         }
 
-        // 4. Fallback: manifest item with "cover" in its href and image-like media-type
+        // 4. Cover document whose first image is the cover (common in EPUB 2 files).
+        if let item = manifestItems.values.first(where: {
+            let name = URL(fileURLWithPath: $0.href).deletingPathExtension().lastPathComponent.lowercased()
+            return name == "cover" && $0.mediaType.lowercased() == "application/xhtml+xml"
+        }) {
+            return item.href
+        }
+
+        // 5. Fallback: manifest item with "cover" in its href and image-like media-type
         let imageMediaTypes: Set<String> = [
             "image/jpeg", "image/jpg", "image/png", "image/gif",
             "image/svg+xml", "image/webp", "image/avif"
@@ -314,7 +358,7 @@ private final class PackageDocumentDelegate: NSObject, XMLParserDelegate {
             return item.href
         }
 
-        // 5. Last resort: any manifest item with image media-type that contains "cover" in href
+        // 6. Last resort: any manifest item with image media-type that contains "cover" in href
         if let item = manifestItems.values.first(where: {
             $0.href.lowercased().contains("cover")
         }) {
