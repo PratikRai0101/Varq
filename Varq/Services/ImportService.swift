@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import PDFKit
+import ZIPFoundation
 
 struct ImportedBook: Equatable, Sendable {
     let title: String
@@ -85,6 +86,40 @@ actor ImportService {
             coverImageData: coverImageData(from: document),
             libraryRelativePath: fileName,
             format: .pdf
+        )
+    }
+
+    func importCBZ(at sourceURL: URL) throws -> ImportedBook {
+        guard sourceURL.pathExtension.lowercased() == BookFormat.cbz.rawValue else {
+            throw ImportServiceError.unsupportedFormat
+        }
+        let accessedSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if accessedSecurityScopedResource {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let archive = try Archive(url: sourceURL, accessMode: .read)
+        let imageExtensions: Set<String> = ["avif", "gif", "jpeg", "jpg", "png", "webp"]
+        guard let coverEntry = archive.sorted(by: { $0.path < $1.path }).first(where: {
+            imageExtensions.contains(URL(fileURLWithPath: $0.path).pathExtension.lowercased())
+        }) else {
+            throw ImportServiceError.unsupportedFormat
+        }
+        var coverImageData = Data()
+        try archive.extract(coverEntry) { coverImageData.append($0) }
+
+        try fileManager.createDirectory(at: libraryDirectory, withIntermediateDirectories: true)
+        let fileName = UUID().uuidString + "." + BookFormat.cbz.rawValue
+        try fileManager.copyItem(at: sourceURL, to: libraryDirectory.appendingPathComponent(fileName))
+
+        return ImportedBook(
+            title: sourceURL.deletingPathExtension().lastPathComponent,
+            author: "Unknown Author",
+            coverImageData: coverImageData,
+            libraryRelativePath: fileName,
+            format: .cbz
         )
     }
 

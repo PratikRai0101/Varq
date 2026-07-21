@@ -24,7 +24,8 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 ## Phase 3 — Import pipeline
 - [x] `ImportService`: EPUB import via the native EPUB parser, extract title/author/cover
 - [x] `ImportService`: PDF import via PDFKit
-- [ ] `ImportService`: CBZ/CBR import (archive extraction + first-page-as-cover)
+- [x] `ImportService`: CBZ import (archive extraction + first-page-as-cover)
+- [ ] `ImportService`: CBR import (requires an App Store-compatible RAR decoder)
 - [ ] Duplicate detection via content hash
 - [ ] Drag-and-drop target on LibraryView + `NSOpenPanel` fallback
 - [ ] Unit tests against fixture files in `VarqTests/Fixtures/` (small, permissively-licensed samples only)
