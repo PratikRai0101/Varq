@@ -8,6 +8,7 @@ struct ImportedBook: Equatable, Sendable {
     let author: String
     let coverImageData: Data?
     let libraryRelativePath: String
+    let contentHash: String
     let format: BookFormat
 }
 
@@ -19,15 +20,18 @@ actor ImportService {
     private let libraryDirectory: URL
     private let epubParser: EpubParserService
     private let fileManager: FileManager
+    private let contentHashService: ContentHashService
 
     init(
         libraryDirectory: URL,
         epubParser: EpubParserService = EpubParserService(),
+        contentHashService: ContentHashService = ContentHashService(),
         fileManager: FileManager = .default
     ) {
         self.libraryDirectory = libraryDirectory
         self.epubParser = epubParser
         self.fileManager = fileManager
+        self.contentHashService = contentHashService
     }
 
     func importEpub(at sourceURL: URL) async throws -> ImportedBook {
@@ -43,6 +47,7 @@ actor ImportService {
         }
 
         let metadata = try await epubParser.parse(at: sourceURL)
+        let contentHash = try await contentHashService.hash(of: sourceURL)
         try fileManager.createDirectory(at: libraryDirectory, withIntermediateDirectories: true)
 
         let fileName = UUID().uuidString + "." + BookFormat.epub.rawValue
@@ -54,11 +59,12 @@ actor ImportService {
             author: metadata.author,
             coverImageData: metadata.coverImageData,
             libraryRelativePath: fileName,
+            contentHash: contentHash,
             format: .epub
         )
     }
 
-    func importPDF(at sourceURL: URL) throws -> ImportedBook {
+    func importPDF(at sourceURL: URL) async throws -> ImportedBook {
         guard sourceURL.pathExtension.lowercased() == BookFormat.pdf.rawValue else {
             throw ImportServiceError.unsupportedFormat
         }
@@ -79,17 +85,19 @@ actor ImportService {
         let destinationURL = libraryDirectory.appendingPathComponent(fileName)
         try fileManager.copyItem(at: sourceURL, to: destinationURL)
 
+        let contentHash = try await contentHashService.hash(of: sourceURL)
         let attributes = document.documentAttributes
         return ImportedBook(
             title: attributes?[PDFDocumentAttribute.titleAttribute] as? String ?? sourceURL.deletingPathExtension().lastPathComponent,
             author: attributes?[PDFDocumentAttribute.authorAttribute] as? String ?? "Unknown Author",
             coverImageData: coverImageData(from: document),
             libraryRelativePath: fileName,
+            contentHash: contentHash,
             format: .pdf
         )
     }
 
-    func importCBZ(at sourceURL: URL) throws -> ImportedBook {
+    func importCBZ(at sourceURL: URL) async throws -> ImportedBook {
         guard sourceURL.pathExtension.lowercased() == BookFormat.cbz.rawValue else {
             throw ImportServiceError.unsupportedFormat
         }
@@ -110,6 +118,7 @@ actor ImportService {
         var coverImageData = Data()
         try archive.extract(coverEntry) { coverImageData.append($0) }
 
+        let contentHash = try await contentHashService.hash(of: sourceURL)
         try fileManager.createDirectory(at: libraryDirectory, withIntermediateDirectories: true)
         let fileName = UUID().uuidString + "." + BookFormat.cbz.rawValue
         try fileManager.copyItem(at: sourceURL, to: libraryDirectory.appendingPathComponent(fileName))
@@ -119,6 +128,7 @@ actor ImportService {
             author: "Unknown Author",
             coverImageData: coverImageData,
             libraryRelativePath: fileName,
+            contentHash: contentHash,
             format: .cbz
         )
     }

@@ -17,6 +17,7 @@ struct ImportServiceTests {
         #expect(importedBook.author == "Varq Tests")
         #expect(importedBook.coverImageData?.isEmpty == false)
         #expect(importedBook.format == .epub)
+        #expect(importedBook.contentHash == "92d762053739df652863577f28ec06178241e34a8b8b38f889783dd8a38671de")
         #expect(
             FileManager.default.fileExists(
                 atPath: libraryDirectory
