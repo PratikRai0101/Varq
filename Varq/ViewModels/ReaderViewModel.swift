@@ -37,11 +37,11 @@ final class ReaderViewModel {
         }
     }
 
-    func goForward() async {
+    func goForward() async -> Bool {
         await navigate { try await renderer.goForward() }
     }
 
-    func goBackward() async {
+    func goBackward() async -> Bool {
         await navigate { try await renderer.goBackward() }
     }
 
@@ -99,14 +99,18 @@ final class ReaderViewModel {
         }
     }
 
-    private func navigate(_ operation: () async throws -> Bool) async {
+    private func navigate(_ operation: () async throws -> Bool) async -> Bool {
         do {
-            _ = try await operation()
+            let didNavigate = try await operation()
             currentLocator = renderer.currentLocator
-            persistCurrentLocator()
+            if didNavigate {
+                persistCurrentLocator()
+            }
             errorMessage = nil
+            return didNavigate
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 

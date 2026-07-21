@@ -9,6 +9,19 @@ enum VarqSpacing {
 enum VarqLayout {
     static let coverGridMinimumWidth: CGFloat = 152
     static let pageTurnSwipeDistance: CGFloat = 48
+    static let pageTurnShadowRadius: CGFloat = 16
+}
+
+enum VarqMotion {
+    static let pageTurnResponse = 0.32
+    static let pageTurnDampingFraction = 0.82
+    static let reducedMotionCrossFadeDuration = 0.18
+    static let pageTurnSettleMilliseconds = 320
+}
+
+enum VarqOpacity {
+    static let pageTurnOverlay = 0.22
+    static let pageTurnShadow = 0.32
 }
 
 enum VarqTypography {
