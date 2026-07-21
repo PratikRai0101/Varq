@@ -137,15 +137,23 @@ struct LibraryView: View {
                 .pickerStyle(.menu)
             }
 
-            ToolbarItem(placement: .primaryAction) {
-                Button("Import books", systemImage: "plus", action: chooseFiles)
-            }
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Import books", systemImage: "plus") {
+                        chooseFiles()
+                    }
+                }
+                ToolbarItem {
+                    Button("Import folder", systemImage: "folder.badge.plus") {
+                        chooseFolder()
+                    }
+                }
         }
     }
 
     private func iconForCollection(_ collection: BookCollection) -> String {
         switch collection.name {
         case "All": "books.vertical"
+        case "Currently Reading": "book.open"
         case "Want to Read": "bookmark"
         case "Finished": "checkmark.circle"
         case "Favorites": "heart"
@@ -188,6 +196,12 @@ struct LibraryView: View {
 
     @ViewBuilder
     private func bookMenu(for book: Book) -> some View {
+        if book.readingProgress != nil {
+            Button("Resume reading", systemImage: "bookmark.fill") {
+                // Navigation is handled by the card tap; this item is informational.
+            }
+        }
+
         if book.isPrivate {
             Button("Unmark as private", systemImage: "lock.open") {
                 privateBookViewModel.unmarkPrivate(
@@ -336,6 +350,15 @@ struct LibraryView: View {
 
         Task {
             await importViewModel.importFiles(urls, into: modelContext)
+            reloadLibrary()
+        }
+    }
+
+    private func chooseFolder() {
+        let urls = importViewModel.chooseFiles(allowDirectories: true)
+        guard let directory = urls.first else { return }
+        Task {
+            await importViewModel.importDirectory(directory, into: modelContext)
             reloadLibrary()
         }
     }

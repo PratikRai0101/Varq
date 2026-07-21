@@ -42,11 +42,27 @@ final class ImportViewModel {
         importErrors = []
     }
 
-    func chooseFiles() -> [URL] {
+    func chooseFiles(allowDirectories: Bool = false) -> [URL] {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = allowDirectories
         panel.allowedContentTypes = Self.supportedContentTypes
         return panel.runModal() == .OK ? panel.urls : []
+    }
+
+    func importDirectory(_ directoryURL: URL, into context: ModelContext) async {
+        let fileManager = FileManager.default
+        guard let enumerator = fileManager.enumerator(at: directoryURL, includingPropertiesForKeys: nil) else {
+            return
+        }
+        var urls: [URL] = []
+        for case let fileURL as URL in enumerator {
+            let ext = fileURL.pathExtension.lowercased()
+            if [BookFormat.epub.rawValue, BookFormat.pdf.rawValue, BookFormat.cbz.rawValue].contains(ext) {
+                urls.append(fileURL)
+            }
+        }
+        await importFiles(urls, into: context)
     }
 
     func importDroppedFiles(_ providers: [NSItemProvider], into context: ModelContext) async {

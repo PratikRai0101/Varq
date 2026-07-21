@@ -206,11 +206,18 @@ final class ReaderViewModel {
 
         do {
             let locatorData = try JSONEncoder().encode(currentLocator)
+            let percentComplete = max(0, min(1, currentLocator.progression))
             if let readingProgress = book.readingProgress {
                 readingProgress.locatorData = locatorData
                 readingProgress.lastReadDate = .now
+                readingProgress.percentComplete = percentComplete
             } else {
-                let readingProgress = ReadingProgress(locatorData: locatorData, book: book)
+                let readingProgress = ReadingProgress(
+                    locatorData: locatorData,
+                    lastReadDate: .now,
+                    percentComplete: percentComplete,
+                    book: book
+                )
                 modelContext.insert(readingProgress)
             }
             try modelContext.save()

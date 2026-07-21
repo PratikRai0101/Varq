@@ -75,7 +75,7 @@ final class LibraryViewModel {
 
     private func ensureDefaultCollections(in context: ModelContext) {
         let existing = try? context.fetch(FetchDescriptor<BookCollection>())
-        let defaultNames = ["All", "Want to Read", "Finished", "Favorites"]
+        let defaultNames = ["All", "Currently Reading", "Want to Read", "Finished", "Favorites"]
         let existingNames = Set(existing?.map(\.name) ?? [])
         for name in defaultNames where !existingNames.contains(name) {
             context.insert(BookCollection(name: name, isDefault: true))

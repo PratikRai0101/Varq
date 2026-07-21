@@ -60,19 +60,44 @@ actor EpubParserService {
 
     private func scanArchiveForCoverImage(_ archive: Archive) -> Data? {
         let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "gif", "webp", "avif"]
-        let candidates = archive.filter { entry in
+        // 1. Any image with "cover" in the path
+        let coverCandidates = archive.filter { entry in
             let ext = URL(fileURLWithPath: entry.path).pathExtension.lowercased()
             let lowerPath = entry.path.lowercased()
             return imageExtensions.contains(ext) && lowerPath.contains("cover")
         }
-        guard let entry = candidates.min(by: { $0.path.count < $1.path.count }) else {
-            return nil
+        if let entry = coverCandidates.min(by: { $0.path.count < $1.path.count }) {
+            var data = Data()
+            try? archive.extract(entry) { chunk in
+                data.append(chunk)
+            }
+            return data.isEmpty ? nil : data
         }
-        var data = Data()
-        try? archive.extract(entry) { chunk in
-            data.append(chunk)
+        // 2. Any image named like a cover (case-insensitive)
+        let coverNames: Set<String> = ["cover", "titlepage", "front", " Jacket"]
+        let nameCandidates = archive.filter { entry in
+            let ext = URL(fileURLWithPath: entry.path).pathExtension.lowercased()
+            let lowerName = entry.path.lowercased()
+            return imageExtensions.contains(ext) && coverNames.contains(where: { lowerName.contains($0) })
         }
-        return data.isEmpty ? nil : data
+        if let entry = nameCandidates.min(by: { $0.path.count < $1.path.count }) {
+            var data = Data()
+            try? archive.extract(entry) { chunk in
+                data.append(chunk)
+            }
+            return data.isEmpty ? nil : data
+        }
+        // 3. First image in the archive (last resort)
+        if let entry = archive.first(where: {
+            imageExtensions.contains(URL(fileURLWithPath: $0.path).pathExtension.lowercased())
+        }) {
+            var data = Data()
+            try? archive.extract(entry) { chunk in
+                data.append(chunk)
+            }
+            return data.isEmpty ? nil : data
+        }
+        return nil
     }
 
     private func parsePackagePath(from containerData: Data) throws -> String {

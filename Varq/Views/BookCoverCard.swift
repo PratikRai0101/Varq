@@ -57,6 +57,24 @@ struct BookCoverCard: View {
                     .clipShape(Circle())
                     .padding(VarqSpacing.compact)
             }
+
+            if let progress = book.readingProgress, progress.percentComplete > 0 {
+                VStack {
+                    Spacer()
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Rectangle()
+                                .fill(Color.varqIndigo.opacity(0.5))
+                            Rectangle()
+                                .fill(Color.varqSaffron)
+                                .frame(width: proxy.size.width * CGFloat(progress.percentComplete))
+                        }
+                    }
+                    .frame(height: 4)
+                    .clipShape(RoundedRectangle(cornerRadius: 2))
+                }
+                .padding(VarqSpacing.compact)
+            }
         }
     }
 }
