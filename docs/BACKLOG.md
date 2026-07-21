@@ -15,7 +15,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] Implement `DesignSystem/Typography.swift` (UI font + reading serif definitions)
 - [ ] Generate/finalize original brand art using `docs/art-prompts.md` (splash screen, app icon exploration, empty-state illustration) — verify each output against the sourcing rules in `design-system.md` before use
 - [x] Build app icon from the compass mark motif (see `design-system.md` motif study), refined using the app icon generation prompt if a richer version is wanted
-- [ ] Verify light/dark mode both render correctly against the color table
+- [x] Verify light/dark mode both render correctly against the color table
 
 ## Phase 2 — Data models
 - [x] Implement `Book`, `ReadingProgress`, `Highlight` SwiftData models per `ARCHITECTURE.md`
@@ -56,14 +56,14 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] `Highlight` list view per book
 - [x] `ExportService`: Markdown export (Obsidian-compatible frontmatter)
 - [x] `ExportService`: JSON export
-- [ ] Unit tests for export format correctness
+- [x] Unit tests for export format correctness
 
 ## Phase 8 — Private shelf (Touch ID)
 - [x] `BiometricGateService`: LocalAuthentication wrapper
 - [x] Mark-as-private UI flow
 - [x] CryptoKit encryption at rest + Keychain-stored key with biometric access control
 - [x] Session-based unlock behavior
-- [ ] Manual security review pass before considering this feature complete — this is the highest-stakes feature in the app from a trust standpoint
+- [x] Manual security review pass before considering this feature complete — this is the highest-stakes feature in the app from a trust standpoint
 
 ## Phase 9 — Polish & pre-submission
 - [ ] Full pass against `docs/design-system.md` — flag any screen that doesn't match the reference mockup's warmth/restraint balance
