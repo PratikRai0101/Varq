@@ -32,19 +32,31 @@ struct BookCoverCard: View {
 
     @ViewBuilder
     private var cover: some View {
-        if let coverImageData = book.coverImageData,
-           let coverImage = NSImage(data: coverImageData) {
-            Image(nsImage: coverImage)
-                .resizable()
-                .scaledToFill()
-        } else {
-            RoundedRectangle(cornerRadius: VarqSpacing.compact)
-                .fill(Color.varqIndigo)
-                .overlay {
-                    Image(systemName: "book.closed")
-                        .font(VarqTypography.ui(.largeTitle))
-                        .foregroundStyle(Color.varqSaffron)
-                }
+        ZStack(alignment: .topTrailing) {
+            if let coverImageData = book.coverImageData,
+               let coverImage = NSImage(data: coverImageData) {
+                Image(nsImage: coverImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                RoundedRectangle(cornerRadius: VarqSpacing.compact)
+                    .fill(Color.varqIndigo)
+                    .overlay {
+                        Image(systemName: "book.closed")
+                            .font(VarqTypography.ui(.largeTitle))
+                            .foregroundStyle(Color.varqSaffron)
+                    }
+            }
+
+            if book.isPrivate {
+                Image(systemName: "lock.fill")
+                    .font(VarqTypography.ui(.caption))
+                    .foregroundStyle(Color.varqSaffron)
+                    .padding(VarqSpacing.compact)
+                    .background(Color.varqIndigo.opacity(0.72))
+                    .clipShape(Circle())
+                    .padding(VarqSpacing.compact)
+            }
         }
     }
 }
