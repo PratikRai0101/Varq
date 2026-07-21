@@ -8,6 +8,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, WKNavigationDelegate {
     private let publicationService: EpubPublicationService
     private let sessionRootDirectory: URL
     private var publication: EpubPublication?
+    private var appearance = ReadingAppearance()
     private var navigationContinuation: CheckedContinuation<Void, Error>?
 
     private(set) var currentLocator: BookLocator?
@@ -59,6 +60,17 @@ final class EpubWebRenderer: NSObject, BookRenderer, WKNavigationDelegate {
             await close()
             throw error
         }
+    }
+
+    func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
+        self.appearance = appearance
+        guard let currentLocator else {
+            return
+        }
+
+        try await applyPaginationStyle()
+        let progression = try await setProgression(currentLocator.progression)
+        try updateCurrentLocator(progression: progression)
     }
 
     func close() async {
@@ -195,7 +207,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, WKNavigationDelegate {
             }
             style.textContent = `
                 html { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; }
-                body { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; column-width: ${width}px !important; column-gap: 0 !important; column-fill: auto !important; }
+                body { width: ${width}px !important; height: ${height}px !important; margin: 0 !important; overflow: hidden !important; box-sizing: border-box !important; column-width: ${width}px !important; column-gap: 0 !important; column-fill: auto !important; padding-left: \(appearance.horizontalMargin)px !important; padding-right: \(appearance.horizontalMargin)px !important; font-family: \(appearance.fontFamily.cssFamily) !important; font-size: \(appearance.fontSize)px !important; line-height: \(appearance.lineHeight) !important; }
             `;
             return true;
         })();

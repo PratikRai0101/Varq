@@ -12,6 +12,7 @@ final class ReaderViewModel {
     private var modelContext: ModelContext?
 
     private(set) var currentLocator: BookLocator?
+    private(set) var readingAppearance = ReadingAppearance()
     private(set) var errorMessage: String?
     var rendererView: NSView { renderer.view }
 
@@ -44,10 +45,52 @@ final class ReaderViewModel {
         await navigate { try await renderer.goBackward() }
     }
 
+    func setFontFamily(_ fontFamily: ReadingFontFamily) async {
+        var appearance = readingAppearance
+        appearance.fontFamily = fontFamily
+        await updateReadingAppearance(appearance)
+    }
+
+    func setFontSize(_ fontSize: Double) async {
+        var appearance = readingAppearance
+        appearance.fontSize = min(max(fontSize, ReadingAppearance.minimumFontSize), ReadingAppearance.maximumFontSize)
+        await updateReadingAppearance(appearance)
+    }
+
+    func setLineHeight(_ lineHeight: Double) async {
+        guard ReadingAppearance.lineHeights.contains(lineHeight) else {
+            return
+        }
+        var appearance = readingAppearance
+        appearance.lineHeight = lineHeight
+        await updateReadingAppearance(appearance)
+    }
+
+    func setHorizontalMargin(_ horizontalMargin: Double) async {
+        var appearance = readingAppearance
+        appearance.horizontalMargin = min(
+            max(horizontalMargin, ReadingAppearance.minimumHorizontalMargin),
+            ReadingAppearance.maximumHorizontalMargin
+        )
+        await updateReadingAppearance(appearance)
+    }
+
     func close() async {
         persistCurrentLocator()
         await renderer.close()
         currentLocator = nil
+    }
+
+    private func updateReadingAppearance(_ appearance: ReadingAppearance) async {
+        do {
+            try await renderer.updateReadingAppearance(appearance)
+            readingAppearance = appearance
+            currentLocator = renderer.currentLocator
+            persistCurrentLocator()
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func navigate(_ operation: () async throws -> Bool) async {

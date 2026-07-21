@@ -8,6 +8,7 @@ protocol BookRenderer: AnyObject {
     var supportedFormat: BookFormat { get }
 
     func open(bookURL: URL, at locator: BookLocator?) async throws
+    func updateReadingAppearance(_ appearance: ReadingAppearance) async throws
     func close() async
     func goForward() async throws -> Bool
     func goBackward() async throws -> Bool

@@ -58,6 +58,24 @@ struct ReaderView: View {
         }
         .onDisappear { Task { await viewModel.close() } }
         .toolbar {
+            ToolbarItem {
+                ReaderAppearanceControls(
+                    appearance: viewModel.readingAppearance,
+                    setFontFamily: { fontFamily in
+                        Task { await viewModel.setFontFamily(fontFamily) }
+                    },
+                    setFontSize: { fontSize in
+                        Task { await viewModel.setFontSize(fontSize) }
+                    },
+                    setLineHeight: { lineHeight in
+                        Task { await viewModel.setLineHeight(lineHeight) }
+                    },
+                    setHorizontalMargin: { horizontalMargin in
+                        Task { await viewModel.setHorizontalMargin(horizontalMargin) }
+                    }
+                )
+            }
+
             ToolbarItem(placement: .primaryAction) {
                 Button("Close reader", systemImage: "xmark", action: dismiss.callAsFunction)
             }

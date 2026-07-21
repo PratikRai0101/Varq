@@ -35,6 +35,23 @@ struct ReaderViewModelTests {
         #expect(try JSONDecoder().decode(BookLocator.self, from: persistedData) == advancedLocator)
     }
 
+    @Test func updatesTheRendererWithReadingAppearanceChanges() async throws {
+        let locator = try epubLocator(progression: 0)
+        let renderer = FakeBookRenderer(locator: locator)
+        let viewModel = ReaderViewModel(book: book(), bookURL: bookURL, renderer: renderer)
+
+        await viewModel.setFontSize(ReadingAppearance.maximumFontSize)
+        await viewModel.setLineHeight(1.9)
+        await viewModel.setHorizontalMargin(ReadingAppearance.maximumHorizontalMargin)
+        await viewModel.setFontFamily(.newYork)
+
+        #expect(viewModel.readingAppearance.fontSize == ReadingAppearance.maximumFontSize)
+        #expect(viewModel.readingAppearance.lineHeight == 1.9)
+        #expect(viewModel.readingAppearance.horizontalMargin == ReadingAppearance.maximumHorizontalMargin)
+        #expect(viewModel.readingAppearance.fontFamily == .newYork)
+        #expect(renderer.updatedAppearance == viewModel.readingAppearance)
+    }
+
     @Test func restoresAndClearsThePersistedLocatorWhenClosing() async throws {
         let storedLocator = try epubLocator(progression: 0.25)
         let renderer = FakeBookRenderer(locator: try epubLocator(progression: 0))
@@ -98,6 +115,7 @@ private final class FakeBookRenderer: BookRenderer {
 
     private(set) var currentLocator: BookLocator?
     private(set) var openedLocator: BookLocator?
+    private(set) var updatedAppearance: ReadingAppearance?
     private(set) var didClose = false
 
     init(locator: BookLocator, advancedLocator: BookLocator? = nil) {
@@ -108,6 +126,10 @@ private final class FakeBookRenderer: BookRenderer {
     func open(bookURL: URL, at locator: BookLocator?) async throws {
         openedLocator = locator
         currentLocator = locator ?? initialLocator
+    }
+
+    func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
+        updatedAppearance = appearance
     }
 
     func close() async {

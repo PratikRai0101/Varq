@@ -47,6 +47,10 @@ final class PDFBookRenderer: BookRenderer {
         try await go(to: initialLocator)
     }
 
+    func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
+        // PDFKit renders embedded PDF typography; it has no document-text typography controls.
+    }
+
     func close() async {
         navigationView.document = nil
         currentLocator = nil
