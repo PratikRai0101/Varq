@@ -17,6 +17,23 @@ struct ReaderViewModelTests {
         #expect(viewModel.errorMessage == nil)
     }
 
+    @Test func recordsTheInitialLocatorWhenOpening() async throws {
+        let initialLocator = try epubLocator(progression: 0)
+        let renderer = FakeBookRenderer(locator: initialLocator)
+        let context = try modelContext()
+        let book = book()
+        context.insert(book)
+        try context.save()
+        let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
+        viewModel.configurePersistence(using: context)
+
+        await viewModel.open()
+
+        let locatorData = try #require(book.readingProgress?.locatorData)
+        #expect(try JSONDecoder().decode(BookLocator.self, from: locatorData) == initialLocator)
+        #expect(book.readingProgress?.percentComplete == 0)
+    }
+
     @Test func persistsTheLocatorAfterNavigation() async throws {
         let initialLocator = try epubLocator(progression: 0)
         let advancedLocator = try epubLocator(progression: 0.5)

@@ -43,6 +43,7 @@ final class ReaderViewModel {
             let readerURL = try privateBookSessionService.readerURL(for: book, managedFileURL: bookURL)
             try await renderer.open(bookURL: readerURL, at: initialLocator)
             currentLocator = renderer.currentLocator
+            persistCurrentLocator()
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription

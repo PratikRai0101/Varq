@@ -22,6 +22,7 @@ final class LibraryViewModel {
     }
 
     private(set) var books: [Book] = []
+    private var allBooks: [Book] = []
     private(set) var collections: [BookCollection] = []
     var sortOrder: SortOrder = .title {
         didSet { sortBooks() }
@@ -32,7 +33,7 @@ final class LibraryViewModel {
 
     func load(using context: ModelContext) throws {
         ensureDefaultCollections(in: context)
-        books = try context.fetch(FetchDescriptor<Book>())
+        allBooks = try context.fetch(FetchDescriptor<Book>())
         collections = try context.fetch(
             FetchDescriptor<BookCollection>(sortBy: [SortDescriptor(\BookCollection.name)])
         )
@@ -85,14 +86,15 @@ final class LibraryViewModel {
 
     private func applyFilter() {
         guard let selected = selectedCollection, selected.name != "All" else {
+            books = allBooks
             sortBooks()
             return
         }
-        let filtered = books.filter { book in
+        let filtered = allBooks.filter { book in
             switch selected.name {
             case "Currently Reading":
                 guard let progress = book.readingProgress else { return false }
-                return progress.percentComplete > 0 && progress.percentComplete < 1
+                return progress.percentComplete < 1
             case "Finished":
                 guard let progress = book.readingProgress else { return false }
                 return progress.percentComplete >= 1
