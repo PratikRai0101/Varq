@@ -18,6 +18,14 @@ struct PrivateBookKeyStoreTests {
         #expect(keychain.lastPrompt == "Unlock private shelf")
         #expect(keychain.dataByAccount[bookID.uuidString] == nil)
     }
+
+    @Test func storesAKeyInTheSystemKeychain() throws {
+        let store = PrivateBookKeyStore()
+        let bookID = UUID()
+        defer { try? store.removeKey(for: bookID) }
+
+        try store.store(SymmetricKey(size: .bits256), for: bookID)
+    }
 }
 
 private final class FakeKeychainItemAccess: KeychainItemAccessing {
