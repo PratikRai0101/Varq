@@ -8,6 +8,9 @@ struct LibraryView: View {
     @State private var isDropTargeted = false
     @State private var privateBookViewModel = PrivateBookViewModel()
     @State private var bookToDelete: Book?
+    @State private var newCollectionName = ""
+    @State private var isAddingCollection = false
+    @State private var bookToRefresh: Book?
 
     let importViewModel: ImportViewModel
     let managedLibraryDirectory: URL
@@ -15,41 +18,10 @@ struct LibraryView: View {
     var body: some View {
         @Bindable var libraryViewModel = libraryViewModel
 
-        NavigationStack {
-            Group {
-                if libraryViewModel.books.isEmpty {
-                    LibraryEmptyState(importBooks: chooseFiles)
-                } else {
-                    ScrollView {
-                        LazyVGrid(
-                            columns: [GridItem(.adaptive(minimum: VarqLayout.coverGridMinimumWidth), spacing: VarqSpacing.regular)],
-                            spacing: VarqSpacing.large
-                        ) {
-                            ForEach(libraryViewModel.books) { book in
-                                bookCard(for: book)
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(VarqSpacing.large)
-            .foregroundStyle(Color.varqInkLight)
-            .background(isDropTargeted ? Color.varqParchmentDeep : .varqParchment)
-            .navigationTitle("Library")
-            .toolbar {
-                ToolbarItem {
-                    Picker("Sort books", selection: $libraryViewModel.sortOrder) {
-                        ForEach(LibraryViewModel.SortOrder.allCases, id: \.self) { sortOrder in
-                            Text(sortOrder.displayName).tag(sortOrder)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                }
-
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Import books", systemImage: "plus", action: chooseFiles)
-                }
-            }
+        NavigationSplitView {
+            sidebar
+        } detail: {
+            libraryGrid
         }
         .task { reloadLibrary() }
         .onDrop(of: ImportViewModel.supportedContentTypeIdentifiers, isTargeted: $isDropTargeted) { providers in
@@ -70,6 +42,89 @@ struct LibraryView: View {
         } message: {
             Text("This book and its reading progress will be permanently removed.")
         }
+        .alert("New collection", isPresented: $isAddingCollection) {
+            TextField("Name", text: $newCollectionName)
+            Button("Cancel", role: .cancel) { newCollectionName = "" }
+            Button("Create") {
+                guard !newCollectionName.isEmpty else { return }
+                libraryViewModel.createCollection(named: newCollectionName, using: modelContext)
+                newCollectionName = ""
+            }
+        } message: {
+            Text("Enter a name for the new collection.")
+        }
+    }
+
+    private var sidebar: some View {
+        List(selection: $libraryViewModel.selectedCollection) {
+            Section("Collections") {
+                ForEach(libraryViewModel.collections) { collection in
+                    Label(collection.name, systemImage: iconForCollection(collection))
+                        .tag(collection as BookCollection?)
+                }
+                .onDelete { indexSet in
+                    for index in indexSet {
+                        let collection = libraryViewModel.collections[index]
+                        libraryViewModel.deleteCollection(collection, using: modelContext)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Library")
+        .toolbar {
+            ToolbarItem {
+                Button("New collection", systemImage: "folder.badge.plus") {
+                    isAddingCollection = true
+                }
+            }
+        }
+    }
+
+    private var libraryGrid: some View {
+        Group {
+            if libraryViewModel.books.isEmpty {
+                LibraryEmptyState(importBooks: chooseFiles)
+            } else {
+                ScrollView {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: VarqLayout.coverGridMinimumWidth), spacing: VarqSpacing.regular)],
+                        spacing: VarqSpacing.large
+                    ) {
+                        ForEach(libraryViewModel.books) { book in
+                            bookCard(for: book)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(VarqSpacing.large)
+        .foregroundStyle(Color.varqInkLight)
+        .background(isDropTargeted ? Color.varqParchmentDeep : .varqParchment)
+        .navigationTitle(libraryViewModel.selectedCollection?.name ?? "Library")
+        .toolbar {
+            ToolbarItem {
+                Picker("Sort books", selection: $libraryViewModel.sortOrder) {
+                    ForEach(LibraryViewModel.SortOrder.allCases, id: \.self) { sortOrder in
+                        Text(sortOrder.displayName).tag(sortOrder)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+
+            ToolbarItem(placement: .primaryAction) {
+                Button("Import books", systemImage: "plus", action: chooseFiles)
+            }
+        }
+    }
+
+    private func iconForCollection(_ collection: BookCollection) -> String {
+        switch collection.name {
+        case "All": "books.vertical"
+        case "Want to Read": "bookmark"
+        case "Finished": "checkmark.circle"
+        case "Favorites": "heart"
+        default: "folder"
+        }
     }
 
     @ViewBuilder
@@ -82,7 +137,7 @@ struct LibraryView: View {
                 BookCoverCard(book: book)
             }
             .buttonStyle(.plain)
-            .contextMenu { privateBookMenu(for: book) }
+            .contextMenu { bookMenu(for: book) }
         case .pdf:
             NavigationLink {
                 ReaderView(book: book, bookURL: bookURL(for: book), renderer: PDFBookRenderer())
@@ -90,7 +145,7 @@ struct LibraryView: View {
                 BookCoverCard(book: book)
             }
             .buttonStyle(.plain)
-            .contextMenu { privateBookMenu(for: book) }
+            .contextMenu { bookMenu(for: book) }
         case .cbz:
             NavigationLink {
                 ReaderView(book: book, bookURL: bookURL(for: book), renderer: CBZBookRenderer())
@@ -98,7 +153,7 @@ struct LibraryView: View {
                 BookCoverCard(book: book)
             }
             .buttonStyle(.plain)
-            .contextMenu { privateBookMenu(for: book) }
+            .contextMenu { bookMenu(for: book) }
         case .cbr:
             BookCoverCard(book: book)
                 .accessibilityHint("CBR reading support is planned for a future release.")
@@ -106,7 +161,7 @@ struct LibraryView: View {
     }
 
     @ViewBuilder
-    private func privateBookMenu(for book: Book) -> some View {
+    private func bookMenu(for book: Book) -> some View {
         if !book.isPrivate {
             Button("Mark as private", systemImage: "lock") {
                 privateBookViewModel.markPrivate(
@@ -117,8 +172,47 @@ struct LibraryView: View {
             }
         }
 
+        Menu("Add to collection") {
+            ForEach(libraryViewModel.collections.filter { $0.name != "All" }) { collection in
+                let isInCollection = book.collections?.contains(where: { $0.id == collection.id }) ?? false
+                Button {
+                    if isInCollection {
+                        libraryViewModel.removeBook(book, from: collection, using: modelContext)
+                    } else {
+                        libraryViewModel.addBook(book, to: collection, using: modelContext)
+                    }
+                } label: {
+                    Label(
+                        collection.name,
+                        systemImage: isInCollection ? "checkmark" : "plus"
+                    )
+                }
+            }
+        }
+
+        if book.format == .epub || book.format == .pdf {
+            Button("Refresh metadata", systemImage: "arrow.clockwise") {
+                Task { await refreshMetadata(for: book) }
+            }
+        }
+
         Button("Delete book", systemImage: "trash", role: .destructive) {
             bookToDelete = book
+        }
+    }
+
+    private func refreshMetadata(for book: Book) async {
+        let fileURL = bookURL(for: book)
+        let parser = EpubParserService()
+        do {
+            let metadata = try await parser.parse(at: fileURL)
+            book.title = metadata.title
+            book.author = metadata.author
+            book.coverImageData = metadata.coverImageData
+            try? modelContext.save()
+            reloadLibrary()
+        } catch {
+            // Silently ignore refresh failures; the book keeps its old metadata.
         }
     }
 
