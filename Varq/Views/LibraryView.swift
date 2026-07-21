@@ -8,6 +8,9 @@ struct LibraryView: View {
     @State private var isDropTargeted = false
     @State private var privateBookViewModel = PrivateBookViewModel()
     @State private var bookToDelete: Book?
+    @State private var bookToRename: Book?
+    @State private var renameTitle = ""
+    @State private var renameAuthor = ""
     @State private var newCollectionName = ""
     @State private var isAddingCollection = false
     @State private var bookToRefresh: Book?
@@ -52,6 +55,20 @@ struct LibraryView: View {
             }
         } message: {
             Text("Enter a name for the new collection.")
+        }
+        .alert("Rename book", isPresented: renameAlertIsPresented) {
+            TextField("Title", text: $renameTitle)
+            TextField("Author", text: $renameAuthor)
+            Button("Cancel", role: .cancel) {
+                bookToRename = nil
+                renameTitle = ""
+                renameAuthor = ""
+            }
+            Button("Save") {
+                performRename()
+            }
+        } message: {
+            Text("Edit the title and author for this book.")
         }
     }
 
@@ -196,6 +213,12 @@ struct LibraryView: View {
             }
         }
 
+        Button("Rename", systemImage: "pencil") {
+            bookToRename = book
+            renameTitle = book.title
+            renameAuthor = book.author
+        }
+
         Button("Delete book", systemImage: "trash", role: .destructive) {
             bookToDelete = book
         }
@@ -240,6 +263,36 @@ struct LibraryView: View {
                 }
             }
         )
+    }
+
+    private var renameAlertIsPresented: Binding<Bool> {
+        Binding(
+            get: { bookToRename != nil },
+            set: { isPresented in
+                if !isPresented {
+                    bookToRename = nil
+                    renameTitle = ""
+                    renameAuthor = ""
+                }
+            }
+        )
+    }
+
+    private func performRename() {
+        guard let book = bookToRename else { return }
+        let trimmedTitle = renameTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAuthor = renameAuthor.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedTitle.isEmpty {
+            book.title = trimmedTitle
+        }
+        if !trimmedAuthor.isEmpty {
+            book.author = trimmedAuthor
+        }
+        try? modelContext.save()
+        bookToRename = nil
+        renameTitle = ""
+        renameAuthor = ""
+        reloadLibrary()
     }
 
     private func performDelete() {
