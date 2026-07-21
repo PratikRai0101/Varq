@@ -8,6 +8,7 @@ enum VarqSpacing {
 
 enum VarqLayout {
     static let coverGridMinimumWidth: CGFloat = 152
+    static let pageTurnSwipeDistance: CGFloat = 48
 }
 
 enum VarqTypography {

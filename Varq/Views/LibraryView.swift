@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 import SwiftUI
 
@@ -7,6 +8,7 @@ struct LibraryView: View {
     @State private var isDropTargeted = false
 
     let importViewModel: ImportViewModel
+    let managedLibraryDirectory: URL
 
     var body: some View {
         @Bindable var libraryViewModel = libraryViewModel
@@ -22,7 +24,7 @@ struct LibraryView: View {
                             spacing: VarqSpacing.large
                         ) {
                             ForEach(libraryViewModel.books) { book in
-                                BookCoverCard(book: book)
+                                bookCard(for: book)
                             }
                         }
                     }
@@ -60,6 +62,33 @@ struct LibraryView: View {
         } message: {
             Text(importViewModel.importErrors.map { "\($0.fileName): \($0.message)" }.joined(separator: "\n"))
         }
+    }
+
+    @ViewBuilder
+    private func bookCard(for book: Book) -> some View {
+        switch book.format {
+        case .epub:
+            NavigationLink {
+                ReaderView(bookURL: bookURL(for: book), renderer: EpubWebRenderer())
+            } label: {
+                BookCoverCard(book: book)
+            }
+            .buttonStyle(.plain)
+        case .pdf:
+            NavigationLink {
+                ReaderView(bookURL: bookURL(for: book), renderer: PDFBookRenderer())
+            } label: {
+                BookCoverCard(book: book)
+            }
+            .buttonStyle(.plain)
+        case .cbz, .cbr:
+            BookCoverCard(book: book)
+                .accessibilityHint("Comic reading support is coming in a later phase.")
+        }
+    }
+
+    private func bookURL(for book: Book) -> URL {
+        managedLibraryDirectory.appendingPathComponent(book.libraryRelativePath)
     }
 
     private var importErrorIsPresented: Binding<Bool> {

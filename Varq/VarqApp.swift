@@ -11,6 +11,7 @@ import SwiftData
 @main
 struct VarqApp: App {
     let importViewModel: ImportViewModel
+    let managedLibraryDirectory: URL
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -36,7 +37,7 @@ struct VarqApp: App {
             fatalError("The app sandbox did not provide an Application Support directory.")
         }
 
-        let managedLibraryDirectory = applicationSupportDirectory
+        managedLibraryDirectory = applicationSupportDirectory
             .appendingPathComponent("Varq", isDirectory: true)
             .appendingPathComponent("Library", isDirectory: true)
         importViewModel = ImportViewModel(importer: ImportService(libraryDirectory: managedLibraryDirectory))
@@ -44,7 +45,10 @@ struct VarqApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(importViewModel: importViewModel)
+            ContentView(
+                importViewModel: importViewModel,
+                managedLibraryDirectory: managedLibraryDirectory
+            )
         }
         .modelContainer(sharedModelContainer)
     }

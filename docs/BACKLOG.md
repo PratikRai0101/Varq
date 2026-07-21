@@ -38,7 +38,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 
 ## Phase 5 — Reader view core
 - [x] `ReaderViewModel`: coordinates the reader engine, exposes current reading locator/position
-- [ ] `ReaderView`: paginated rendering, arrow key + trackpad swipe navigation
+- [x] `ReaderView`: paginated rendering, arrow key + trackpad swipe navigation
 - [ ] Persist reading position to `ReadingProgress` on navigation/close
 - [ ] Typography controls (font size, line height, margins) wired to live re-render
 - [ ] Light / dark / sepia page-tone modes (independent toggle per `design-system.md`)
