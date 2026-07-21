@@ -65,6 +65,14 @@ struct ReaderView: View {
         }
         .onDisappear { Task { await viewModel.close() } }
         .toolbar {
+            if viewModel.supportsTextHighlights {
+                ToolbarItem {
+                    HighlightCreationControls { color in
+                        Task { await viewModel.createHighlight(color: color) }
+                    }
+                }
+            }
+
             if viewModel.supportsComicControls {
                 ToolbarItem {
                     ComicReadingControls(

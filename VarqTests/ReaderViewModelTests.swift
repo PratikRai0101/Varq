@@ -60,6 +60,30 @@ struct ReaderViewModelTests {
         #expect(renderer.updatedAppearance == viewModel.readingAppearance)
     }
 
+    @Test func createsAPersistedHighlightFromTheRendererSelection() async throws {
+        let locator = try epubLocator(progression: 0)
+        let anchor = try TextHighlightAnchor(
+            locator: locator,
+            startOffset: 3,
+            endOffset: 11,
+            quote: TextQuoteSelector(exact: "selected")
+        )
+        let renderer = FakeBookRenderer(locator: locator, selectedAnchor: anchor)
+        let context = try modelContext()
+        let book = book()
+        context.insert(book)
+        try context.save()
+        let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
+        viewModel.configurePersistence(using: context)
+
+        await viewModel.createHighlight(color: .saffron)
+
+        let highlight = try #require(book.highlights.first)
+        #expect(highlight.selectedText == "selected")
+        #expect(highlight.colorTag == HighlightColorTag.saffron.rawValue)
+        #expect(try JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData) == anchor)
+    }
+
     @Test func restoresAndClearsThePersistedLocatorWhenClosing() async throws {
         let storedLocator = try epubLocator(progression: 0.25)
         let renderer = FakeBookRenderer(locator: try epubLocator(progression: 0))
@@ -115,20 +139,26 @@ struct ReaderViewModelTests {
 }
 
 @MainActor
-private final class FakeBookRenderer: BookRenderer {
+private final class FakeBookRenderer: BookRenderer, TextSelectionProviding {
     let view = NSView()
     let supportedFormat: BookFormat = .epub
     private let initialLocator: BookLocator
     private let advancedLocator: BookLocator?
+    private let selectedAnchor: TextHighlightAnchor?
 
     private(set) var currentLocator: BookLocator?
     private(set) var openedLocator: BookLocator?
     private(set) var updatedAppearance: ReadingAppearance?
     private(set) var didClose = false
 
-    init(locator: BookLocator, advancedLocator: BookLocator? = nil) {
+    init(
+        locator: BookLocator,
+        advancedLocator: BookLocator? = nil,
+        selectedAnchor: TextHighlightAnchor? = nil
+    ) {
         initialLocator = locator
         self.advancedLocator = advancedLocator
+        self.selectedAnchor = selectedAnchor
     }
 
     func open(bookURL: URL, at locator: BookLocator?) async throws {
@@ -138,6 +168,10 @@ private final class FakeBookRenderer: BookRenderer {
 
     func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
         updatedAppearance = appearance
+    }
+
+    func selectedTextHighlightAnchor() async throws -> TextHighlightAnchor? {
+        selectedAnchor
     }
 
     func close() async {

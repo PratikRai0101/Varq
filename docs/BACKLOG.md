@@ -51,7 +51,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] Page-fit options (fit width / fit height / actual size)
 
 ## Phase 7 — Highlights & notes
-- [ ] Text selection → highlight creation UI (color picker from design system palette)
+- [x] Text selection → highlight creation UI (color picker from design system palette)
 - [ ] Optional note attachment to a highlight
 - [ ] `Highlight` list view per book
 - [ ] `ExportService`: Markdown export (Obsidian-compatible frontmatter)

@@ -16,6 +16,7 @@ final class ReaderViewModel {
     private(set) var errorMessage: String?
     var rendererView: NSView { renderer.view }
     var supportsComicControls: Bool { renderer.supportedFormat == .cbz }
+    var supportsTextHighlights: Bool { renderer is any TextSelectionProviding }
 
     init(book: Book, bookURL: URL, renderer: some BookRenderer) {
         self.book = book
@@ -98,6 +99,29 @@ final class ReaderViewModel {
             ReadingAppearance.maximumHorizontalMargin
         )
         await updateReadingAppearance(appearance)
+    }
+
+    func createHighlight(color: HighlightColorTag) async {
+        guard let selectionRenderer = renderer as? any TextSelectionProviding else {
+            return
+        }
+        do {
+            guard let anchor = try await selectionRenderer.selectedTextHighlightAnchor(),
+                  let modelContext else {
+                return
+            }
+            let highlight = Highlight(
+                locatorData: try JSONEncoder().encode(anchor),
+                selectedText: anchor.quote.exact,
+                colorTag: color.rawValue,
+                book: book
+            )
+            modelContext.insert(highlight)
+            try modelContext.save()
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func close() async {

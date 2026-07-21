@@ -3,7 +3,7 @@ import Foundation
 import WebKit
 
 @MainActor
-final class EpubWebRenderer: NSObject, BookRenderer, WKNavigationDelegate {
+final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKNavigationDelegate {
     private let webView: WKWebView
     private let publicationService: EpubPublicationService
     private let sessionRootDirectory: URL
@@ -71,6 +71,45 @@ final class EpubWebRenderer: NSObject, BookRenderer, WKNavigationDelegate {
         try await applyPaginationStyle()
         let progression = try await setProgression(currentLocator.progression)
         try updateCurrentLocator(progression: progression)
+    }
+
+    func selectedTextHighlightAnchor() async throws -> TextHighlightAnchor? {
+        guard let currentLocator else {
+            return nil
+        }
+        let result = try await evaluate(script: """
+        (() => {
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
+            const range = selection.getRangeAt(0);
+            const rootRange = document.createRange();
+            rootRange.selectNodeContents(document.body);
+            rootRange.setEnd(range.startContainer, range.startOffset);
+            const startOffset = rootRange.toString().length;
+            rootRange.selectNodeContents(document.body);
+            rootRange.setEnd(range.endContainer, range.endOffset);
+            const endOffset = rootRange.toString().length;
+            const content = document.body.textContent || '';
+            return JSON.stringify({
+                startOffset,
+                endOffset,
+                exact: selection.toString(),
+                prefix: content.slice(Math.max(0, startOffset - 32), startOffset),
+                suffix: content.slice(endOffset, endOffset + 32)
+            });
+        })();
+        """)
+        guard let json = result as? String,
+              let data = json.data(using: .utf8) else {
+            return nil
+        }
+        let selection = try JSONDecoder().decode(WebTextSelection.self, from: data)
+        return try TextHighlightAnchor(
+            locator: currentLocator,
+            startOffset: selection.startOffset,
+            endOffset: selection.endOffset,
+            quote: TextQuoteSelector(exact: selection.exact, prefix: selection.prefix, suffix: selection.suffix)
+        )
     }
 
     func close() async {
@@ -274,6 +313,14 @@ final class EpubWebRenderer: NSObject, BookRenderer, WKNavigationDelegate {
         navigationContinuation?.resume(throwing: error)
         navigationContinuation = nil
     }
+}
+
+private struct WebTextSelection: Decodable {
+    let startOffset: Int
+    let endOffset: Int
+    let exact: String
+    let prefix: String?
+    let suffix: String?
 }
 
 private struct PaginationMetrics: Decodable {
