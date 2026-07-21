@@ -28,4 +28,5 @@ private final class FakePrivateBookProtector: PrivateBookProtecting {
         return PrivateBookProtectionHandle(key: SymmetricKey(size: .bits256))
     }
     func rollbackProtection(_ handle: PrivateBookProtectionHandle, bookID: UUID, managedFileURL: URL) throws { }
+    func unprotect(bookID: UUID, managedFileURL: URL) throws { }
 }
