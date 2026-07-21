@@ -76,6 +76,12 @@ actor EpubParserService {
         }
         // AVIF / HEIC (ftyp box)
         if data[4] == 0x66, data[5] == 0x74, data[6] == 0x79, data[7] == 0x70 { return true }
+        // SVG (starts with "<?xml" or "<svg")
+        if let prefix = String(data: data.prefix(128), encoding: .utf8)?.lowercased() {
+            if prefix.contains("<svg") || prefix.contains("<?xml") {
+                return true
+            }
+        }
         return false
     }
 

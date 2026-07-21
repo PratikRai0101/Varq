@@ -304,12 +304,20 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
                     -webkit-column-break-inside: avoid !important;
                     text-align: left !important;
                 }
-                a {
+                a, a:link, a:visited, a:hover, a:active {
                     color: inherit !important;
                     text-decoration: none !important;
+                    border-bottom: none !important;
                 }
-                ::-webkit-scrollbar {
+                ::-webkit-scrollbar,
+                *::-webkit-scrollbar,
+                * *::-webkit-scrollbar {
                     display: none !important;
+                    width: 0 !important;
+                    height: 0 !important;
+                }
+                * {
+                    scrollbar-width: none !important;
                 }
             `;
             return true;
