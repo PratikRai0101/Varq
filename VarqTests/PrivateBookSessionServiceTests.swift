@@ -15,7 +15,8 @@ struct PrivateBookSessionServiceTests {
         let key = SymmetricKey(size: .bits256)
         let crypto = PrivateBookCryptoService()
         try crypto.encryptManagedFile(at: managedURL, using: key)
-        let session = PrivateBookSessionService(keyStore: FakeSessionKeyStore(key: key, bookID: book.id))
+        let keyStore = FakeSessionKeyStore(key: key, bookID: book.id)
+        let session = PrivateBookSessionService(keyStore: keyStore)
 
         let readerURL = try session.readerURL(for: book, managedFileURL: managedURL)
 
@@ -23,14 +24,20 @@ struct PrivateBookSessionServiceTests {
         #expect(try Data(contentsOf: readerURL) == plaintext)
         session.closeSession()
         #expect(!FileManager.default.fileExists(atPath: readerURL.path))
+        _ = try session.readerURL(for: book, managedFileURL: managedURL)
+        #expect(keyStore.retrievalCount == 1)
     }
 }
 
 private final class FakeSessionKeyStore: PrivateBookKeyStoring {
     let key: SymmetricKey
     let bookID: UUID
+    private(set) var retrievalCount = 0
     init(key: SymmetricKey, bookID: UUID) { self.key = key; self.bookID = bookID }
     func store(_ key: SymmetricKey, for bookID: UUID) throws { }
-    func key(for bookID: UUID, authenticationPrompt: String) throws -> SymmetricKey { key }
+    func key(for bookID: UUID, authenticationPrompt: String) throws -> SymmetricKey {
+        retrievalCount += 1
+        return key
+    }
     func removeKey(for bookID: UUID) throws { }
 }

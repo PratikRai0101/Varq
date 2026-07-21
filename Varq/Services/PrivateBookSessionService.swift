@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 final class PrivateBookSessionService {
@@ -5,6 +6,7 @@ final class PrivateBookSessionService {
     private let keyStore: any PrivateBookKeyStoring
     private let fileManager: FileManager
     private var sessionDirectory: URL?
+    private var unlockedKeys: [UUID: SymmetricKey] = [:]
 
     init(
         cryptoService: PrivateBookCryptoService = PrivateBookCryptoService(),
@@ -18,7 +20,13 @@ final class PrivateBookSessionService {
 
     func readerURL(for book: Book, managedFileURL: URL) throws -> URL {
         guard book.isPrivate else { return managedFileURL }
-        let key = try keyStore.key(for: book.id, authenticationPrompt: "Unlock private book")
+        let key: SymmetricKey
+        if let unlockedKey = unlockedKeys[book.id] {
+            key = unlockedKey
+        } else {
+            key = try keyStore.key(for: book.id, authenticationPrompt: "Unlock private book")
+            unlockedKeys[book.id] = key
+        }
         let directory = fileManager.temporaryDirectory
             .appendingPathComponent("Varq-Private-Session", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -32,5 +40,10 @@ final class PrivateBookSessionService {
         guard let sessionDirectory else { return }
         try? fileManager.removeItem(at: sessionDirectory)
         self.sessionDirectory = nil
+    }
+
+    func endApplicationSession() {
+        closeSession()
+        unlockedKeys.removeAll()
     }
 }

@@ -62,7 +62,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] `BiometricGateService`: LocalAuthentication wrapper
 - [x] Mark-as-private UI flow
 - [x] CryptoKit encryption at rest + Keychain-stored key with biometric access control
-- [ ] Session-based unlock behavior
+- [x] Session-based unlock behavior
 - [ ] Manual security review pass before considering this feature complete — this is the highest-stakes feature in the app from a trust standpoint
 
 ## Phase 9 — Polish & pre-submission
