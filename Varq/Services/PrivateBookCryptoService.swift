@@ -11,6 +11,12 @@ struct PrivateBookCryptoService {
         try replaceFile(at: fileURL, with: ciphertext)
     }
 
+    func decryptReplacingManagedFile(at encryptedFileURL: URL, using key: SymmetricKey) throws {
+        let ciphertext = try Data(contentsOf: encryptedFileURL)
+        let sealedBox = try AES.GCM.SealedBox(combined: ciphertext)
+        try replaceFile(at: encryptedFileURL, with: AES.GCM.open(sealedBox, using: key))
+    }
+
     func decryptManagedFile(at encryptedFileURL: URL, to destinationURL: URL, using key: SymmetricKey) throws {
         let ciphertext = try Data(contentsOf: encryptedFileURL)
         let sealedBox = try AES.GCM.SealedBox(combined: ciphertext)
