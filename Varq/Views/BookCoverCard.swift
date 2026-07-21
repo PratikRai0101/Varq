@@ -13,12 +13,14 @@ struct BookCoverCard: View {
             Text(book.title)
                 .font(VarqTypography.uiMedium(.headline))
                 .foregroundStyle(Color.varqInkLight)
-                .lineLimit(2)
+                .lineLimit(2, reservesSpace: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(book.author)
                 .font(VarqTypography.ui(.subheadline))
                 .foregroundStyle(Color.varqTerracotta)
                 .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(book.title) by \(book.author)")

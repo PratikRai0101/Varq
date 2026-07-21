@@ -5,7 +5,7 @@ struct LibraryEmptyState: View {
 
     var body: some View {
         VStack(spacing: VarqSpacing.regular) {
-            Image(systemName: "star.compass")
+            Image(systemName: "location.north.fill")
                 .font(VarqTypography.ui(.largeTitle))
                 .foregroundStyle(Color.varqSaffron)
                 .accessibilityHidden(true)
