@@ -8,6 +8,9 @@ enum VarqSpacing {
 
 enum VarqLayout {
     static let coverGridMinimumWidth: CGFloat = 180
+    static let bookCoverAspectRatio: CGFloat = 0.68
+    static let bookCardProgressHeight: CGFloat = 6
+    static let bookCardProgressCornerRadius: CGFloat = 3
     static let pageTurnSwipeDistance: CGFloat = 48
     static let pageTurnShadowRadius: CGFloat = 16
     static let noteEditorMinimumWidth: CGFloat = 360
