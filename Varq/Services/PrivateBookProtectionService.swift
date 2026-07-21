@@ -4,6 +4,7 @@ import Foundation
 protocol PrivateBookProtecting: AnyObject {
     func protect(bookID: UUID, managedFileURL: URL) throws -> PrivateBookProtectionHandle
     func rollbackProtection(_ handle: PrivateBookProtectionHandle, bookID: UUID, managedFileURL: URL) throws
+    func unprotect(bookID: UUID, managedFileURL: URL) throws
 }
 
 final class PrivateBookProtectionService: PrivateBookProtecting {
@@ -32,6 +33,12 @@ final class PrivateBookProtectionService: PrivateBookProtecting {
 
     func rollbackProtection(_ handle: PrivateBookProtectionHandle, bookID: UUID, managedFileURL: URL) throws {
         try cryptoService.decryptReplacingManagedFile(at: managedFileURL, using: handle.key)
+        try keyStore.removeKey(for: bookID)
+    }
+
+    func unprotect(bookID: UUID, managedFileURL: URL) throws {
+        let key = try keyStore.key(for: bookID, authenticationPrompt: "Unlock private book to remove protection")
+        try cryptoService.decryptReplacingManagedFile(at: managedFileURL, using: key)
         try keyStore.removeKey(for: bookID)
     }
 }
