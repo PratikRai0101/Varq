@@ -19,6 +19,8 @@ final class Book {
     @Relationship(deleteRule: .cascade, inverse: \Highlight.book)
     var highlights: [Highlight]
 
+    var collections: [BookCollection]?
+
     var format: BookFormat {
         get { BookFormat(rawValue: formatRawValue) ?? .epub }
         set { formatRawValue = newValue.rawValue }

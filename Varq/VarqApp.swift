@@ -19,6 +19,7 @@ struct VarqApp: App {
             Book.self,
             ReadingProgress.self,
             Highlight.self,
+            BookCollection.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
