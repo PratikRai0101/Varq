@@ -87,9 +87,12 @@ actor ImportService {
 
         let contentHash = try await contentHashService.hash(of: sourceURL)
         let attributes = document.documentAttributes
+        let rawTitle = attributes?[PDFDocumentAttribute.titleAttribute] as? String
+        let rawAuthor = attributes?[PDFDocumentAttribute.authorAttribute] as? String
+        let fileNameTitle = sourceURL.deletingPathExtension().lastPathComponent
         return ImportedBook(
-            title: attributes?[PDFDocumentAttribute.titleAttribute] as? String ?? sourceURL.deletingPathExtension().lastPathComponent,
-            author: attributes?[PDFDocumentAttribute.authorAttribute] as? String ?? "Unknown Author",
+            title: sanitizePDFMetadata(rawTitle, fallback: fileNameTitle),
+            author: sanitizePDFMetadata(rawAuthor, fallback: "Unknown Author"),
             coverImageData: coverImageData(from: document),
             libraryRelativePath: fileName,
             contentHash: contentHash,
@@ -153,5 +156,28 @@ actor ImportService {
             return nil
         }
         return bitmap.representation(using: .png, properties: [:])
+    }
+
+    private func sanitizePDFMetadata(_ value: String?, fallback: String) -> String {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
+            return fallback
+        }
+        let lowercased = value.lowercased()
+        let garbagePatterns = [
+            "microsoft word", "untitled", "document", "preferred customer",
+            "unknown", "user", "admin", "author", "no author",
+            "created by", "pdf creator", "acrobat", "pdf generator"
+        ]
+        for pattern in garbagePatterns {
+            if lowercased.contains(pattern) {
+                return fallback
+            }
+        }
+        // If the title is suspiciously long and contains the filename pattern,
+        // it is likely auto-generated garbage.
+        if value.count > 80, lowercased.contains(" - ") || lowercased.contains("_") {
+            return fallback
+        }
+        return value
     }
 }
