@@ -17,14 +17,14 @@ final class LocalAuthenticationContext: BiometricAuthenticationContext {
 
     func canEvaluateBiometrics() throws {
         var error: NSError?
-        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
             throw error ?? BiometricGateError.unavailable
         }
     }
 
     func evaluateBiometrics(localizedReason: String) async throws {
         try await withCheckedThrowingContinuation { continuation in
-            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: localizedReason) { success, error in
+            context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: localizedReason) { success, error in
                 if success {
                     continuation.resume()
                 } else {
