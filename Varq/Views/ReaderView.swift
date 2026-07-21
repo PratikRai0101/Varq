@@ -54,10 +54,16 @@ struct ReaderView: View {
         .simultaneousGesture(
             DragGesture(minimumDistance: VarqLayout.pageTurnSwipeDistance)
                 .onEnded { value in
-                    guard abs(value.translation.width) > abs(value.translation.height) else {
+                    let horizontal = value.translation.width
+                    let vertical = value.translation.height
+                    // Require a clearly horizontal, deliberate swipe to avoid
+                    // colliding with WebKit text-selection drags.
+                    guard abs(horizontal) > abs(vertical) * 2,
+                          abs(horizontal) > 80
+                    else {
                         return
                     }
-                    performPageTurn(value.translation.width < 0 ? .forward : .backward)
+                    performPageTurn(horizontal < 0 ? .forward : .backward)
                 }
         )
         .task {

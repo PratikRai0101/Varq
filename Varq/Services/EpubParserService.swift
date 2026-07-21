@@ -14,17 +14,19 @@ actor EpubParserService {
         let packagePath = try parsePackagePath(from: containerData)
         let packageData = try extractData(from: archive, at: packagePath)
         let package = try parsePackage(from: packageData)
-        let coverImageData: Data?
-        if let coverPath = package.coverPath {
-            coverImageData = try? extractDataWithFallback(from: archive, at: resolvedArchivePath(coverPath, relativeTo: packagePath))
-        } else {
-            coverImageData = nil
-        }
+        let coverImageData: Data? = {
+            if let coverPath = package.coverPath,
+               let data = try? extractDataWithFallback(from: archive, at: resolvedArchivePath(coverPath, relativeTo: packagePath)),
+               isImageData(data) {
+                return data
+            }
+            return scanArchiveForCoverImage(archive)
+        }()
 
         return EpubMetadata(
             title: package.title ?? fileURL.deletingPathExtension().lastPathComponent,
             author: package.author ?? "Unknown Author",
-            coverImageData: coverImageData ?? scanArchiveForCoverImage(archive)
+            coverImageData: coverImageData
         )
     }
 
@@ -56,6 +58,25 @@ actor EpubParserService {
             }
             throw EpubParserError.missingArchiveEntry(path)
         }
+    }
+
+    private func isImageData(_ data: Data) -> Bool {
+        guard data.count >= 8 else { return false }
+        // JPEG
+        if data[0] == 0xFF, data[1] == 0xD8 { return true }
+        // PNG
+        if data[0] == 0x89, data[1] == 0x50, data[2] == 0x4E, data[3] == 0x47 { return true }
+        // GIF
+        if data[0] == 0x47, data[1] == 0x49, data[2] == 0x46 { return true }
+        // WebP (starts with RIFF....WEBP)
+        if data[0] == 0x52, data[1] == 0x49, data[2] == 0x46, data[3] == 0x46,
+           data.count >= 12,
+           data[8] == 0x57, data[9] == 0x45, data[10] == 0x42, data[11] == 0x50 {
+            return true
+        }
+        // AVIF / HEIC (ftyp box)
+        if data[4] == 0x66, data[5] == 0x74, data[6] == 0x79, data[7] == 0x70 { return true }
+        return false
     }
 
     private func scanArchiveForCoverImage(_ archive: Archive) -> Data? {

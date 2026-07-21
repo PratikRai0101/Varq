@@ -263,7 +263,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
                 }
                 body {
                     width: ${availableWidth}px !important;
-                    height: ${height}px !important;
+                    min-height: ${height}px !important;
                     margin: 0 ${margin}px !important;
                     padding: 0 !important;
                     overflow: hidden !important;
@@ -275,32 +275,41 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
                     font-family: \(appearance.fontFamily.cssFamily) !important;
                     font-size: \(appearance.fontSize)px !important;
                     line-height: \(appearance.lineHeight) !important;
+                    text-align: justify !important;
                     -webkit-hyphens: auto !important;
                     orphans: 2 !important;
                     widows: 2 !important;
                 }
-                body *, body *::before, body *::after {
-                    box-sizing: border-box !important;
+                /* Only reset elements that commonly break columns; keep relative positioning intact */
+                body > *, body section > *, body article > *, body div > * {
                     max-width: 100% !important;
                     white-space: normal !important;
-                    float: none !important;
-                    position: static !important;
-                    clear: both !important;
                 }
-                p, li, blockquote, dd, td, th {
+                p, li, blockquote, dd, td, th, figcaption {
                     overflow-wrap: break-word !important;
+                    text-align: justify !important;
                 }
-                img, svg, video, canvas {
+                img, svg, video, canvas, figure {
                     max-width: 100% !important;
-                    max-height: 80% !important;
+                    max-height: 80vh !important;
                     height: auto !important;
                     display: block !important;
                     margin: 0.5em auto !important;
+                    float: none !important;
+                    clear: both !important;
                 }
                 h1, h2, h3, h4, h5, h6 {
                     break-inside: avoid !important;
                     page-break-inside: avoid !important;
                     -webkit-column-break-inside: avoid !important;
+                    text-align: left !important;
+                }
+                a {
+                    color: inherit !important;
+                    text-decoration: none !important;
+                }
+                ::-webkit-scrollbar {
+                    display: none !important;
                 }
             `;
             return true;
