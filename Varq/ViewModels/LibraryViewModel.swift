@@ -19,6 +19,15 @@ final class LibraryViewModel {
             case .recentlyRead: "Recently read"
             }
         }
+
+        var symbolName: String {
+            switch self {
+            case .title: "textformat"
+            case .author: "person"
+            case .dateAdded: "calendar"
+            case .recentlyRead: "clock.arrow.circlepath"
+            }
+        }
     }
 
     private(set) var books: [Book] = []
@@ -67,19 +76,42 @@ final class LibraryViewModel {
         try? load(using: context)
     }
 
-    func createCollection(named name: String, using context: ModelContext) {
-        let collection = BookCollection(name: name)
+    func createCollection(named name: String, symbolName: String = "folder", using context: ModelContext) {
+        let collection = BookCollection(name: name, symbolName: symbolName)
         context.insert(collection)
+        try? context.save()
+        try? load(using: context)
+    }
+
+    func updateCollection(_ collection: BookCollection, name: String, symbolName: String, using context: ModelContext) {
+        collection.name = name
+        collection.symbolName = symbolName
         try? context.save()
         try? load(using: context)
     }
 
     private func ensureDefaultCollections(in context: ModelContext) {
         let existing = try? context.fetch(FetchDescriptor<BookCollection>())
-        let defaultNames = ["All", "Currently Reading", "Want to Read", "Finished", "Favorites"]
+        let defaultNames = ["All", "Currently Reading", "Recently Read", "Want to Read", "Finished", "Favorites"]
+        let defaultIcons: [String: String] = [
+            "All": "books.vertical",
+            "Currently Reading": "book.closed",
+            "Recently Read": "clock",
+            "Want to Read": "bookmark",
+            "Finished": "checkmark.circle",
+            "Favorites": "heart",
+        ]
         let existingNames = Set(existing?.map(\.name) ?? [])
         for name in defaultNames where !existingNames.contains(name) {
-            context.insert(BookCollection(name: name, isDefault: true))
+            let collection = BookCollection(name: name, isDefault: true)
+            collection.symbolName = defaultIcons[name] ?? "folder"
+            context.insert(collection)
+        }
+        for collection in existing ?? [] where collection.isDefault {
+            if let icon = defaultIcons[collection.name],
+               collection.symbolName == nil || collection.symbolName == "folder" || collection.symbolName == "book.open" {
+                collection.symbolName = icon
+            }
         }
         try? context.save()
     }
@@ -98,6 +130,8 @@ final class LibraryViewModel {
             case "Finished":
                 guard let progress = book.readingProgress else { return false }
                 return progress.percentComplete >= 1
+            case "Recently Read":
+                return book.readingProgress != nil
             case "Favorites", "Want to Read":
                 return book.collections?.contains(where: { $0.id == selected.id }) ?? false
             default:
@@ -105,11 +139,14 @@ final class LibraryViewModel {
             }
         }
         books = filtered.sorted { lhs, rhs in
+            if selected.name == "Recently Read" {
+                return (lhs.readingProgress?.lastReadDate ?? .distantPast) > (rhs.readingProgress?.lastReadDate ?? .distantPast)
+            }
             switch sortOrder {
-            case .title: lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
-            case .author: lhs.author.localizedCaseInsensitiveCompare(rhs.author) == .orderedAscending
-            case .dateAdded: lhs.dateAdded > rhs.dateAdded
-            case .recentlyRead: (lhs.readingProgress?.lastReadDate ?? .distantPast) > (rhs.readingProgress?.lastReadDate ?? .distantPast)
+            case .title: return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+            case .author: return lhs.author.localizedCaseInsensitiveCompare(rhs.author) == .orderedAscending
+            case .dateAdded: return lhs.dateAdded > rhs.dateAdded
+            case .recentlyRead: return (lhs.readingProgress?.lastReadDate ?? .distantPast) > (rhs.readingProgress?.lastReadDate ?? .distantPast)
             }
         }
     }

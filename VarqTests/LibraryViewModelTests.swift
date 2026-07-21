@@ -46,6 +46,22 @@ struct LibraryViewModelTests {
         #expect(viewModel.books.map(\.title) == ["Ongoing", "Unread"])
     }
 
+    @Test func createsAClockIconForRecentlyRead() throws {
+        let container = try ModelContainer(
+            for: Book.self,
+            BookCollection.self,
+            ReadingProgress.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = ModelContext(container)
+        let viewModel = LibraryViewModel()
+
+        try viewModel.load(using: context)
+
+        let recentlyRead = try #require(viewModel.collections.first { $0.name == "Recently Read" })
+        #expect(recentlyRead.symbolName == "clock")
+    }
+
     @Test func reappliesSortingWhenTheSelectedOrderChanges() throws {
         let container = try ModelContainer(for: Book.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = ModelContext(container)

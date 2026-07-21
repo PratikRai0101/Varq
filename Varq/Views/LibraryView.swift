@@ -12,11 +12,14 @@ struct LibraryView: View {
     @State private var bookToRename: Book?
     @State private var renameTitle = ""
     @State private var renameAuthor = ""
-    @State private var newCollectionName = ""
-    @State private var isAddingCollection = false
     @State private var bookToRefresh: Book?
     @State private var isPrivateBookErrorPresented = false
     @State private var isSettingsPresented = false
+    @State private var isCollectionEditorPresented = false
+    @State private var editingCollection: BookCollection?
+    @State private var collectionEditorName = ""
+    @State private var collectionEditorIcon = "folder"
+    @State private var collectionToDelete: BookCollection?
 
     let importViewModel: ImportViewModel
     let managedLibraryDirectory: URL
@@ -48,17 +51,6 @@ struct LibraryView: View {
         } message: {
             Text("This book and its reading progress will be permanently removed.")
         }
-        .alert("New collection", isPresented: $isAddingCollection) {
-            TextField("Name", text: $newCollectionName)
-            Button("Cancel", role: .cancel) { newCollectionName = "" }
-            Button("Create") {
-                guard !newCollectionName.isEmpty else { return }
-                libraryViewModel.createCollection(named: newCollectionName, using: modelContext)
-                newCollectionName = ""
-            }
-        } message: {
-            Text("Enter a name for the new collection.")
-        }
         .alert("Rename book", isPresented: renameAlertIsPresented) {
             TextField("Title", text: $renameTitle)
             TextField("Author", text: $renameAuthor)
@@ -83,6 +75,87 @@ struct LibraryView: View {
         .sheet(isPresented: $isSettingsPresented) {
             SettingsView()
         }
+        .alert("Delete \"\(collectionToDelete?.name ?? "")\"?", isPresented: deleteCollectionConfirmationIsPresented) {
+            Button("Cancel", role: .cancel) { collectionToDelete = nil }
+            Button("Delete", role: .destructive) {
+                if let collection = collectionToDelete {
+                    libraryViewModel.deleteCollection(collection, using: modelContext)
+                }
+                collectionToDelete = nil
+            }
+        } message: {
+            Text("This collection will be permanently removed. Books in this collection will not be deleted.")
+        }
+        .sheet(isPresented: $isCollectionEditorPresented) {
+            collectionEditorView
+        }
+    }
+
+    private var collectionEditorView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(editingCollection == nil ? "New Collection" : "Edit Collection")
+                    .font(.headline)
+                Spacer()
+                Button("Cancel") { cancelCollectionEditor() }
+                Button("Save") { saveCollectionEditor() }
+                    .disabled(collectionEditorName.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            .padding()
+
+            Divider()
+
+            Form {
+                TextField("Name", text: $collectionEditorName)
+
+                Section("Icon") {
+                    CollectionIconPicker(selectedIcon: $collectionEditorIcon)
+                }
+            }
+            .formStyle(.grouped)
+        }
+        .frame(width: 420, height: 440)
+    }
+
+    private func startEditing(_ collection: BookCollection) {
+        editingCollection = collection
+        collectionEditorName = collection.name
+        collectionEditorIcon = collection.symbolName ?? "folder"
+        isCollectionEditorPresented = true
+    }
+
+    private func startCreatingCollection() {
+        editingCollection = nil
+        collectionEditorName = ""
+        collectionEditorIcon = "folder"
+        isCollectionEditorPresented = true
+    }
+
+    private func saveCollectionEditor() {
+        let name = collectionEditorName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+
+        if let collection = editingCollection {
+            libraryViewModel.updateCollection(collection, name: name, symbolName: collectionEditorIcon, using: modelContext)
+        } else {
+            libraryViewModel.createCollection(named: name, symbolName: collectionEditorIcon, using: modelContext)
+        }
+        isCollectionEditorPresented = false
+    }
+
+    private func cancelCollectionEditor() {
+        isCollectionEditorPresented = false
+    }
+
+    private var deleteCollectionConfirmationIsPresented: Binding<Bool> {
+        Binding(
+            get: { collectionToDelete != nil },
+            set: { isPresented in
+                if !isPresented {
+                    collectionToDelete = nil
+                }
+            }
+        )
     }
 
     private var sidebar: some View {
@@ -92,15 +165,30 @@ struct LibraryView: View {
                     Button {
                         libraryViewModel.selectedCollection = collection
                     } label: {
-                        Label(collection.name, systemImage: iconForCollection(collection))
+                        Label(collection.name, systemImage: collection.symbolName ?? "folder")
                             .foregroundStyle(libraryViewModel.selectedCollection?.id == collection.id ? Color.accentColor : Color.primary)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        if collection.name != "All" {
+                            Button("Edit Collection", systemImage: "pencil") {
+                                startEditing(collection)
+                            }
+                        }
+                        if !collection.isDefault {
+                            Divider()
+                            Button("Delete Collection", systemImage: "trash", role: .destructive) {
+                                collectionToDelete = collection
+                            }
+                        }
+                    }
                 }
                 .onDelete { indexSet in
                     for index in indexSet {
                         let collection = libraryViewModel.collections[index]
-                        libraryViewModel.deleteCollection(collection, using: modelContext)
+                        if !collection.isDefault {
+                            libraryViewModel.deleteCollection(collection, using: modelContext)
+                        }
                     }
                 }
             }
@@ -109,10 +197,15 @@ struct LibraryView: View {
         .toolbar {
             ToolbarItem {
                 Button("New collection", systemImage: "folder.badge.plus") {
-                    isAddingCollection = true
+                    startCreatingCollection()
                 }
             }
         }
+        .navigationSplitViewColumnWidth(
+            min: VarqLayout.sidebarMinimumWidth,
+            ideal: VarqLayout.sidebarIdealWidth,
+            max: VarqLayout.sidebarMaximumWidth
+        )
     }
 
     private var libraryGrid: some View {
@@ -136,14 +229,14 @@ struct LibraryView: View {
             }
         }
         .padding(VarqSpacing.large)
-        .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
-        .background(isDropTargeted ? (colorScheme == .dark ? Color.varqIndigoLight : Color.varqParchmentDeep) : (colorScheme == .dark ? Color.varqIndigo : Color.varqParchment))
+        .foregroundStyle(colorScheme == .dark ? Color.white : Color.varqInkLight)
+        .background(isDropTargeted ? (colorScheme == .dark ? Color.black.opacity(0.85) : Color.varqParchmentDeep) : (colorScheme == .dark ? Color.black : Color.varqParchment))
         .navigationTitle(libraryViewModel.selectedCollection?.name ?? "Library")
         .toolbar {
             ToolbarItem {
                 Picker("Sort books", selection: $libraryViewModel.sortOrder) {
                     ForEach(LibraryViewModel.SortOrder.allCases, id: \.self) { sortOrder in
-                        Text(sortOrder.displayName).tag(sortOrder)
+                        Label(sortOrder.displayName, systemImage: sortOrder.symbolName).tag(sortOrder)
                     }
                 }
                 .pickerStyle(.menu)
@@ -184,17 +277,6 @@ struct LibraryView: View {
         }
         .padding(VarqSpacing.large)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func iconForCollection(_ collection: BookCollection) -> String {
-        switch collection.name {
-        case "All": "books.vertical"
-        case "Currently Reading": "book.open"
-        case "Want to Read": "bookmark"
-        case "Finished": "checkmark.circle"
-        case "Favorites": "heart"
-        default: "folder"
-        }
     }
 
     @ViewBuilder
@@ -398,6 +480,46 @@ struct LibraryView: View {
             try libraryViewModel.load(using: modelContext)
         } catch {
             // Import errors are displayed by ImportViewModel; a library reload failure leaves the current list intact.
+        }
+    }
+}
+
+private struct CollectionIconPicker: View {
+    @Binding var selectedIcon: String
+
+    private let iconOptions: [String] = [
+        "folder", "book", "book.closed", "book.open",
+        "books.vertical", "bookmark", "heart", "star",
+        "flag", "clock", "checkmark.circle", "text.book.closed",
+        "magnifyingglass", "globe", "graduationcap", "pencil",
+        "quote.bubble", "list.bullet", "tray", "square.stack",
+        "rectangle.stack", "doc.text", "newspaper", "scroll",
+        "character.book.closed",
+    ]
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(iconOptions, id: \.self) { icon in
+                    Button {
+                        selectedIcon = icon
+                    } label: {
+                        Image(systemName: icon)
+                            .font(.title3)
+                            .frame(width: 40, height: 40)
+                            .background(selectedIcon == icon ? Color.accentColor.opacity(0.2) : Color.clear)
+                            .cornerRadius(6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(selectedIcon == icon ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .help(icon)
+                }
+            }
         }
     }
 }
