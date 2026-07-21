@@ -12,15 +12,7 @@ struct LibraryView: View {
         NavigationStack {
             Group {
                 if libraryViewModel.books.isEmpty {
-                    ContentUnavailableView {
-                        Label("Your library is waiting", systemImage: "books.vertical")
-                    } description: {
-                        Text("Import an EPUB, PDF, or CBZ to begin reading.")
-                    } actions: {
-                        Button("Import books", action: chooseFiles)
-                            .buttonStyle(.borderedProminent)
-                            .tint(.varqTerracotta)
-                    }
+                    LibraryEmptyState(importBooks: chooseFiles)
                 } else {
                     ScrollView {
                         LazyVGrid(
