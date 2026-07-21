@@ -28,7 +28,6 @@ final class PrivateBookSessionService {
             unlockedKeys[book.id] = key
         }
         let directory = fileManager.temporaryDirectory
-            .appendingPathComponent("Varq-Private-Session", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let decryptedURL = directory.appendingPathComponent(managedFileURL.lastPathComponent)
         do {
