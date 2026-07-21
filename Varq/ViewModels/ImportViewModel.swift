@@ -24,6 +24,7 @@ private enum ImportViewModelError: LocalizedError {
 @Observable
 final class ImportViewModel {
     static let supportedContentTypes = [UTType.pdf] + ["epub", "cbz"].compactMap { UTType(filenameExtension: $0) }
+    static let supportedContentTypeIdentifiers = supportedContentTypes.map(\.identifier)
 
     private(set) var importErrors: [ImportFileError] = []
     private let importer: ImportService
@@ -37,11 +38,25 @@ final class ImportViewModel {
         self.duplicateDetectionService = duplicateDetectionService ?? DuplicateDetectionService()
     }
 
+    func dismissImportErrors() {
+        importErrors = []
+    }
+
     func chooseFiles() -> [URL] {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.allowedContentTypes = Self.supportedContentTypes
         return panel.runModal() == .OK ? panel.urls : []
+    }
+
+    func importDroppedFiles(_ providers: [NSItemProvider], into context: ModelContext) async {
+        var urls: [URL] = []
+        for provider in providers {
+            if let url = await provider.fileURL() {
+                urls.append(url)
+            }
+        }
+        await importFiles(urls, into: context)
     }
 
     func importFiles(_ urls: [URL], into context: ModelContext) async {
@@ -86,6 +101,17 @@ final class ImportViewModel {
         case BookFormat.pdf.rawValue: try await importer.importPDF(at: url)
         case BookFormat.cbz.rawValue: try await importer.importCBZ(at: url)
         default: throw ImportServiceError.unsupportedFormat
+        }
+    }
+}
+
+private extension NSItemProvider {
+    func fileURL() async -> URL? {
+        await withCheckedContinuation { continuation in
+            loadObject(ofClass: NSURL.self) { object, _ in
+                let url = (object as? NSURL).map { $0 as URL }
+                continuation.resume(returning: url)
+            }
         }
     }
 }

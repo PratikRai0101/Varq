@@ -27,7 +27,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] `ImportService`: CBZ import (archive extraction + first-page-as-cover)
 - [ ] `ImportService`: CBR import (requires an App Store-compatible RAR decoder)
 - [x] Duplicate detection via content hash
-- [ ] Drag-and-drop target on LibraryView + `NSOpenPanel` fallback
+- [x] Drag-and-drop target on LibraryView + `NSOpenPanel` fallback
 - [x] Unit tests against fixture files in `VarqTests/Fixtures/` (small, permissively-licensed samples only)
 
 ## Phase 4 — Library view

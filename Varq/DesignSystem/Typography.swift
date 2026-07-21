@@ -1,5 +1,9 @@
 import SwiftUI
 
+enum VarqSpacing {
+    static let large: CGFloat = 24
+}
+
 enum VarqTypography {
     static let readingFontName = "Georgia"
     static let defaultReadingSize: CGFloat = 17
