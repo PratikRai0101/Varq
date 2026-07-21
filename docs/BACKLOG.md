@@ -55,7 +55,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] Optional note attachment to a highlight
 - [x] `Highlight` list view per book
 - [x] `ExportService`: Markdown export (Obsidian-compatible frontmatter)
-- [ ] `ExportService`: JSON export
+- [x] `ExportService`: JSON export
 - [ ] Unit tests for export format correctness
 
 ## Phase 8 — Private shelf (Touch ID)
