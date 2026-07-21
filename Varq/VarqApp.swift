@@ -45,12 +45,6 @@ struct VarqApp: App {
             .appendingPathComponent("Library", isDirectory: true)
         importViewModel = ImportViewModel(importer: ImportService(libraryDirectory: managedLibraryDirectory))
 
-        let appearance = UserDefaults.standard.string(forKey: "appAppearanceOverride") ?? "system"
-        switch appearance {
-        case "light": NSApp.appearance = NSAppearance(named: .aqua)
-        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
-        default: break
-        }
     }
 
     var body: some Scene {
