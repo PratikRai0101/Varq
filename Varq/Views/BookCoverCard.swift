@@ -7,8 +7,8 @@ struct BookCoverCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: VarqSpacing.compact) {
             cover
-                .aspectRatio(0.68, contentMode: .fit)
                 .frame(maxWidth: .infinity)
+                .aspectRatio(0.68, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.compact))
 
             if let progress = book.readingProgress, progress.percentComplete > 0 {
@@ -40,6 +40,7 @@ struct BookCoverCard: View {
             .padding(.horizontal, VarqSpacing.regular)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, VarqSpacing.compact)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(book.title) by \(book.author)")
