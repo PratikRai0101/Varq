@@ -14,6 +14,7 @@ struct LibraryView: View {
     @State private var newCollectionName = ""
     @State private var isAddingCollection = false
     @State private var bookToRefresh: Book?
+    @State private var isPrivateBookErrorPresented = false
 
     let importViewModel: ImportViewModel
     let managedLibraryDirectory: URL
@@ -69,6 +70,13 @@ struct LibraryView: View {
             }
         } message: {
             Text("Edit the title and author for this book.")
+        }
+        .alert("Could not mark as private", isPresented: $isPrivateBookErrorPresented) {
+            Button("OK", role: .cancel) {
+                privateBookViewModel.clearError()
+            }
+        } message: {
+            Text(privateBookViewModel.errorMessage ?? "An unknown error occurred.")
         }
     }
 
@@ -186,6 +194,9 @@ struct LibraryView: View {
                     managedFileURL: bookURL(for: book),
                     using: modelContext
                 )
+                if privateBookViewModel.errorMessage != nil {
+                    isPrivateBookErrorPresented = true
+                }
             }
         }
 

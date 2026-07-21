@@ -29,4 +29,8 @@ final class PrivateBookViewModel {
             errorMessage = error.localizedDescription
         }
     }
+
+    func clearError() {
+        errorMessage = nil
+    }
 }
