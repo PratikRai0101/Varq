@@ -1,19 +1,15 @@
 import AppKit
 import Foundation
+import SwiftData
 import Testing
 @testable import Varq
 
 @MainActor
 struct ReaderViewModelTests {
     @Test func opensAndPublishesTheRendererLocator() async throws {
-        let initialLocator = try BookLocator(
-            format: .epub,
-            spineIndex: 0,
-            resourceHref: "chapter-1.xhtml",
-            progression: 0
-        )
+        let initialLocator = try epubLocator(progression: 0)
         let renderer = FakeBookRenderer(locator: initialLocator)
-        let viewModel = ReaderViewModel(bookURL: URL(fileURLWithPath: "/tmp/book.epub"), renderer: renderer)
+        let viewModel = ReaderViewModel(book: book(), bookURL: bookURL, renderer: renderer)
 
         await viewModel.open()
 
@@ -21,43 +17,75 @@ struct ReaderViewModelTests {
         #expect(viewModel.errorMessage == nil)
     }
 
-    @Test func refreshesTheLocatorAfterNavigation() async throws {
-        let initialLocator = try BookLocator(
-            format: .epub,
-            spineIndex: 0,
-            resourceHref: "chapter-1.xhtml",
-            progression: 0
-        )
-        let advancedLocator = try BookLocator(
-            format: .epub,
-            spineIndex: 0,
-            resourceHref: "chapter-1.xhtml",
-            progression: 0.5
-        )
+    @Test func persistsTheLocatorAfterNavigation() async throws {
+        let initialLocator = try epubLocator(progression: 0)
+        let advancedLocator = try epubLocator(progression: 0.5)
         let renderer = FakeBookRenderer(locator: initialLocator, advancedLocator: advancedLocator)
-        let viewModel = ReaderViewModel(bookURL: URL(fileURLWithPath: "/tmp/book.epub"), renderer: renderer)
+        let context = try modelContext()
+        let book = book()
+        context.insert(book)
+        try context.save()
+        let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
+        viewModel.configurePersistence(using: context)
 
         await viewModel.open()
         await viewModel.goForward()
 
-        #expect(viewModel.currentLocator == advancedLocator)
+        let persistedData = try #require(book.readingProgress?.locatorData)
+        #expect(try JSONDecoder().decode(BookLocator.self, from: persistedData) == advancedLocator)
     }
 
-    @Test func clearsTheLocatorWhenClosing() async throws {
-        let locator = try BookLocator(
-            format: .epub,
-            spineIndex: 0,
-            resourceHref: "chapter-1.xhtml",
-            progression: 0
-        )
-        let renderer = FakeBookRenderer(locator: locator)
-        let viewModel = ReaderViewModel(bookURL: URL(fileURLWithPath: "/tmp/book.epub"), renderer: renderer)
+    @Test func restoresAndClearsThePersistedLocatorWhenClosing() async throws {
+        let storedLocator = try epubLocator(progression: 0.25)
+        let renderer = FakeBookRenderer(locator: try epubLocator(progression: 0))
+        let context = try modelContext()
+        let book = book()
+        let progress = ReadingProgress(locatorData: try JSONEncoder().encode(storedLocator), book: book)
+        context.insert(book)
+        context.insert(progress)
+        try context.save()
+        let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
+        viewModel.configurePersistence(using: context)
 
         await viewModel.open()
         await viewModel.close()
 
-        #expect(viewModel.currentLocator == nil)
+        #expect(renderer.openedLocator == storedLocator)
         #expect(renderer.didClose)
+        #expect(viewModel.currentLocator == nil)
+    }
+
+    private var bookURL: URL {
+        URL(fileURLWithPath: "/tmp/book.epub")
+    }
+
+    private func book() -> Book {
+        Book(
+            title: "Fixture Book",
+            author: "Varq Tests",
+            libraryRelativePath: "fixture.epub",
+            contentHash: UUID().uuidString,
+            format: .epub
+        )
+    }
+
+    private func epubLocator(progression: Double) throws -> BookLocator {
+        try BookLocator(
+            format: .epub,
+            spineIndex: 0,
+            resourceHref: "chapter-1.xhtml",
+            progression: progression
+        )
+    }
+
+    private func modelContext() throws -> ModelContext {
+        let container = try ModelContainer(
+            for: Book.self,
+            ReadingProgress.self,
+            Highlight.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        return ModelContext(container)
     }
 }
 
@@ -69,6 +97,7 @@ private final class FakeBookRenderer: BookRenderer {
     private let advancedLocator: BookLocator?
 
     private(set) var currentLocator: BookLocator?
+    private(set) var openedLocator: BookLocator?
     private(set) var didClose = false
 
     init(locator: BookLocator, advancedLocator: BookLocator? = nil) {
@@ -77,6 +106,7 @@ private final class FakeBookRenderer: BookRenderer {
     }
 
     func open(bookURL: URL, at locator: BookLocator?) async throws {
+        openedLocator = locator
         currentLocator = locator ?? initialLocator
     }
 

@@ -1,12 +1,14 @@
+import SwiftData
 import SwiftUI
 
 struct ReaderView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @FocusState private var isReaderFocused: Bool
     @State private var viewModel: ReaderViewModel
 
-    init(bookURL: URL, renderer: some BookRenderer) {
-        _viewModel = State(initialValue: ReaderViewModel(bookURL: bookURL, renderer: renderer))
+    init(book: Book, bookURL: URL, renderer: some BookRenderer) {
+        _viewModel = State(initialValue: ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer))
     }
 
     var body: some View {
@@ -50,7 +52,10 @@ struct ReaderView: View {
                     }
                 }
         )
-        .task { await viewModel.open() }
+        .task {
+            viewModel.configurePersistence(using: modelContext)
+            await viewModel.open()
+        }
         .onDisappear { Task { await viewModel.close() } }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

@@ -69,14 +69,14 @@ struct LibraryView: View {
         switch book.format {
         case .epub:
             NavigationLink {
-                ReaderView(bookURL: bookURL(for: book), renderer: EpubWebRenderer())
+                ReaderView(book: book, bookURL: bookURL(for: book), renderer: EpubWebRenderer())
             } label: {
                 BookCoverCard(book: book)
             }
             .buttonStyle(.plain)
         case .pdf:
             NavigationLink {
-                ReaderView(bookURL: bookURL(for: book), renderer: PDFBookRenderer())
+                ReaderView(book: book, bookURL: bookURL(for: book), renderer: PDFBookRenderer())
             } label: {
                 BookCoverCard(book: book)
             }
