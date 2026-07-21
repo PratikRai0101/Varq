@@ -51,6 +51,8 @@ struct ReaderView: View {
             performPageTurn(.forward)
             return .handled
         }
+        // WebKit and PDFKit need exclusive drag handling to create text selections.
+        // Keyboard navigation remains available while a text renderer is active.
         .simultaneousGesture(
             DragGesture(minimumDistance: VarqLayout.pageTurnSwipeDistance)
                 .onEnded { value in
@@ -64,7 +66,8 @@ struct ReaderView: View {
                         return
                     }
                     performPageTurn(horizontal < 0 ? .forward : .backward)
-                }
+                },
+            including: viewModel.supportsTextHighlights ? .none : .all
         )
         .task {
             viewModel.configurePersistence(using: modelContext)
