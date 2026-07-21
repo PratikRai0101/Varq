@@ -97,6 +97,19 @@ actor ImportService {
         )
     }
 
+    func discardImportedBook(at relativePath: String) throws {
+        let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
+        guard fileName == relativePath else {
+            throw ImportServiceError.unsupportedFormat
+        }
+
+        let importedFileURL = libraryDirectory.appendingPathComponent(fileName)
+        guard fileManager.fileExists(atPath: importedFileURL.path) else {
+            return
+        }
+        try fileManager.removeItem(at: importedFileURL)
+    }
+
     func importCBZ(at sourceURL: URL) async throws -> ImportedBook {
         guard sourceURL.pathExtension.lowercased() == BookFormat.cbz.rawValue else {
             throw ImportServiceError.unsupportedFormat
