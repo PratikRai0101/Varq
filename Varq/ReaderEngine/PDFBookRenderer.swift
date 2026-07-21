@@ -93,6 +93,49 @@ final class PDFBookRenderer: BookRenderer, TextSelectionProviding {
         currentLocator = nil
     }
 
+    func renderHighlights(_ highlights: [Highlight]) async {
+        guard let document = navigationView.document else { return }
+
+        for pageIndex in 0..<document.pageCount {
+            guard let page = document.page(at: pageIndex) else { continue }
+            for annotation in page.annotations where annotation.contents == "varq-highlight" {
+                page.removeAnnotation(annotation)
+            }
+        }
+
+        for highlight in highlights {
+            guard let anchor = try? JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData),
+                  anchor.precision == .coarsePagePosition,
+                  let page = document.page(at: anchor.locator.spineIndex) else {
+                continue
+            }
+
+            let pageBounds = page.bounds(for: .mediaBox)
+            let yOffset = pageBounds.height * (anchor.approximatePosition ?? 0.5)
+            let highlightHeight: CGFloat = 20
+            let rect = CGRect(
+                x: pageBounds.origin.x + 20,
+                y: pageBounds.origin.y + yOffset - highlightHeight / 2,
+                width: pageBounds.width - 40,
+                height: highlightHeight
+            )
+
+            let annotation = PDFAnnotation(bounds: rect, forType: .highlight, withProperties: nil)
+            annotation.color = nsColor(for: highlight.colorTag)
+            annotation.contents = "varq-highlight"
+            page.addAnnotation(annotation)
+        }
+    }
+
+    private func nsColor(for colorTag: String) -> NSColor {
+        switch HighlightColorTag(rawValue: colorTag) {
+        case .saffron: NSColor(Color.varqSaffron)
+        case .terracotta: NSColor(Color.varqTerracotta)
+        case .maroon: NSColor(Color.varqMaroon)
+        case nil: NSColor(Color.varqSaffron)
+        }
+    }
+
     func goForward() async throws -> Bool {
         guard let currentLocator,
               let document = navigationView.document,
