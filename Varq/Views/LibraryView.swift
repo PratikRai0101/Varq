@@ -81,9 +81,16 @@ struct LibraryView: View {
                 BookCoverCard(book: book)
             }
             .buttonStyle(.plain)
-        case .cbz, .cbr:
+        case .cbz:
+            NavigationLink {
+                ReaderView(book: book, bookURL: bookURL(for: book), renderer: CBZBookRenderer())
+            } label: {
+                BookCoverCard(book: book)
+            }
+            .buttonStyle(.plain)
+        case .cbr:
             BookCoverCard(book: book)
-                .accessibilityHint("Comic reading support is coming in a later phase.")
+                .accessibilityHint("CBR reading support is planned for a future release.")
         }
     }
 
