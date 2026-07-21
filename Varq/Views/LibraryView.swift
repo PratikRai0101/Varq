@@ -7,6 +7,7 @@ struct LibraryView: View {
     @State private var libraryViewModel = LibraryViewModel()
     @State private var isDropTargeted = false
     @State private var privateBookViewModel = PrivateBookViewModel()
+    @State private var bookToDelete: Book?
 
     let importViewModel: ImportViewModel
     let managedLibraryDirectory: URL
@@ -63,6 +64,12 @@ struct LibraryView: View {
         } message: {
             Text(importViewModel.importErrors.map { "\($0.fileName): \($0.message)" }.joined(separator: "\n"))
         }
+        .alert("Delete \"\(bookToDelete?.title ?? "")\"?", isPresented: deleteConfirmationIsPresented) {
+            Button("Cancel", role: .cancel) { bookToDelete = nil }
+            Button("Delete", role: .destructive) { performDelete() }
+        } message: {
+            Text("This book and its reading progress will be permanently removed.")
+        }
     }
 
     @ViewBuilder
@@ -109,6 +116,10 @@ struct LibraryView: View {
                 )
             }
         }
+
+        Button("Delete book", systemImage: "trash", role: .destructive) {
+            bookToDelete = book
+        }
     }
 
     private func bookURL(for book: Book) -> URL {
@@ -124,6 +135,29 @@ struct LibraryView: View {
                 }
             }
         )
+    }
+
+    private var deleteConfirmationIsPresented: Binding<Bool> {
+        Binding(
+            get: { bookToDelete != nil },
+            set: { isPresented in
+                if !isPresented {
+                    bookToDelete = nil
+                }
+            }
+        )
+    }
+
+    private func performDelete() {
+        guard let book = bookToDelete else { return }
+        let fileURL = bookURL(for: book)
+
+        modelContext.delete(book)
+        try? modelContext.save()
+        try? FileManager.default.removeItem(at: fileURL)
+
+        bookToDelete = nil
+        reloadLibrary()
     }
 
     private func chooseFiles() {
