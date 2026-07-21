@@ -34,7 +34,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] `LibraryViewModel`: fetch/sort/filter books
 - [x] `LibraryView`: responsive grid, cover art, title/author labels
 - [x] Empty state (no books imported yet) matching design system voice/tone
-- [ ] Sort controls (title, author, date added, recently read)
+- [x] Sort controls (title, author, date added, recently read)
 
 ## Phase 5 — Reader view core
 - [ ] `ReaderViewModel`: coordinates the reader engine, exposes current reading locator/position

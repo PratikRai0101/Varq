@@ -10,6 +10,15 @@ final class LibraryViewModel {
         case author
         case dateAdded
         case recentlyRead
+
+        var displayName: String {
+            switch self {
+            case .title: "Title"
+            case .author: "Author"
+            case .dateAdded: "Date added"
+            case .recentlyRead: "Recently read"
+            }
+        }
     }
 
     private(set) var books: [Book] = []

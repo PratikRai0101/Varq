@@ -9,6 +9,8 @@ struct LibraryView: View {
     let importViewModel: ImportViewModel
 
     var body: some View {
+        @Bindable var libraryViewModel = libraryViewModel
+
         NavigationStack {
             Group {
                 if libraryViewModel.books.isEmpty {
@@ -31,6 +33,15 @@ struct LibraryView: View {
             .background(isDropTargeted ? Color.varqParchmentDeep : .varqParchment)
             .navigationTitle("Library")
             .toolbar {
+                ToolbarItem {
+                    Picker("Sort books", selection: $libraryViewModel.sortOrder) {
+                        ForEach(LibraryViewModel.SortOrder.allCases, id: \.self) { sortOrder in
+                            Text(sortOrder.displayName).tag(sortOrder)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
+
                 ToolbarItem(placement: .primaryAction) {
                     Button("Import books", systemImage: "plus", action: chooseFiles)
                 }
