@@ -8,6 +8,7 @@ struct BookCoverCard: View {
         VStack(alignment: .leading, spacing: VarqSpacing.compact) {
             cover
                 .aspectRatio(0.68, contentMode: .fit)
+                .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.compact))
 
             if let progress = book.readingProgress, progress.percentComplete > 0 {
