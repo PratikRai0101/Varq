@@ -44,6 +44,7 @@ final class ReaderViewModel {
             try await renderer.open(bookURL: readerURL, at: initialLocator)
             currentLocator = renderer.currentLocator
             persistCurrentLocator()
+            await renderer.renderHighlights(book.highlights)
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -135,11 +136,29 @@ final class ReaderViewModel {
             )
             modelContext.insert(highlight)
             try modelContext.save()
+            await renderer.renderHighlights(book.highlights)
             errorMessage = nil
             return highlight
         } catch {
             errorMessage = error.localizedDescription
             return nil
+        }
+    }
+
+    func navigateToHighlight(_ highlight: Highlight) async {
+        guard let anchor = try? JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData) else {
+            return
+        }
+        do {
+            try await renderer.go(to: anchor.locator)
+            currentLocator = renderer.currentLocator
+            persistCurrentLocator()
+            if let epubRenderer = renderer as? EpubWebRenderer {
+                await epubRenderer.scrollToHighlight(highlight)
+            }
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -170,6 +189,7 @@ final class ReaderViewModel {
             readingAppearance = appearance
             currentLocator = renderer.currentLocator
             persistCurrentLocator()
+            await renderer.renderHighlights(book.highlights)
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
