@@ -33,7 +33,7 @@ The long-term vision includes an iOS companion app, iCloud sync, an on-device AI
 
 - Power readers who currently juggle Apple Books + Calibre because neither does everything
 - Students / researchers who want Markdown/Obsidian-exportable highlights
-- Manga/comic readers who want native CBZ/CBR support without a separate app
+- Manga/comic readers who want native CBZ support without a separate app; CBR support is planned for v1.1+
 - Open-source-minded Mac users who want to inspect/trust the code they read books in
 
 ## 5. Tech stack
@@ -56,7 +56,7 @@ MIT License for all first-party code. Avoids the GPL/App Store distribution ambi
 ## 7. MVP scope (v1.0)
 
 ### 7.1 Import & library
-- Drag-and-drop import of `.epub`, `.pdf`, `.cbz`, `.cbr`
+- Drag-and-drop import of .epub, .pdf, .cbz (CBR deferred to v1.1+ — see section 8)
 - Auto-extraction of title, author, cover image on import
 - Duplicate detection (hash-based) on import
 - Grid library view with cover art, sortable by title/author/date added/recently read
@@ -67,7 +67,7 @@ MIT License for all first-party code. Avoids the GPL/App Store distribution ambi
 - Remembers exact scroll/page position per book, per device
 - Adjustable typography: font family (2–3 curated choices), size, line height, margins
 - Light mode (cream/parchment background, not pure white) and dark/sepia night mode
-- CBZ/CBR mode: right-to-left toggle, dual-page spread, page-fit options
+- CBZ mode: right-to-left toggle, dual-page spread, page-fit options. CBR is deferred to v1.1+ — see 'CBR deferral' note in section 8.
 
 ### 7.3 Notes & highlights
 - Text selection → highlight (multiple colors) + optional note
@@ -85,6 +85,7 @@ MIT License for all first-party code. Avoids the GPL/App Store distribution ambi
 
 ## 8. v1.1+ roadmap (not in MVP scope, but agents should architect for extensibility)
 
+- CBR (RAR-based comic archive) support. Deferred from MVP — see 'CBR deferral' note below.
 - MOBI/AZW3/FB2 → EPUB auto-conversion on import
 - Metadata auto-scraper (Open Library / Google Books API)
 - On-device AI: chapter summaries, vocabulary lookup, Q&A via Foundation Models
@@ -94,6 +95,8 @@ MIT License for all first-party code. Avoids the GPL/App Store distribution ambi
 - Reading stats/streaks (local only)
 - Siri / Shortcuts / App Intents integration
 - iOS companion app
+
+CBR deferral (2026-07-21): CBR support requires an unrar decoder, since RAR is a proprietary compression format. Research found two viable Swift options — UnrarKit (BSD-2 wrapper, no SPM support, last released 2022) and Unrar.swift (MIT wrapper, SPM-native, actively maintained) — but both bundle RARLab's UnRAR C source, which carries its own separate, non-SPDX 'freeware' license (permissive for reading/extracting RAR archives, restricted only around recreating the proprietary RAR compression algorithm). This license is genuinely usable — many shipped Mac/iOS apps rely on it — but it doesn't fit cleanly into standard OSS license auditing, and this ambiguity wasn't worth blocking MVP delivery over. Decision: ship CBZ-only for v1.0; revisit CBR in v1.1+ using Unrar.swift specifically (not UnrarKit, for its better maintenance and native SPM support), once real usage data indicates it's worth the residual licensing ambiguity.
 
 ## 9. Success metrics
 
