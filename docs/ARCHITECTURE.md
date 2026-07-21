@@ -68,6 +68,8 @@ Book file handling must account for App Sandbox constraints — `ImportService` 
 
 ## Private shelf (Touch ID) implementation notes
 
+See `docs/adr/0006-encrypt-private-books-before-marking-them-private.md`: encryption and the private flag are one atomic workflow; a private managed copy is never plaintext at rest.
+
 1. `BiometricGateService` wraps `LAContext.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics)`
 2. On marking a book private: generate a symmetric key via CryptoKit, encrypt the book's file content at rest, store the key in Keychain with `kSecAttrAccessControl` requiring biometric presence
 3. On access attempt: prompt Touch ID → on success, decrypt into a temporary in-memory buffer for the reader engine to read from (avoid writing decrypted plaintext back to disk)
