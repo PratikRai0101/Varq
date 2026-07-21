@@ -8,6 +8,7 @@ final class Book {
     var author: String
     var coverImageData: Data?
     var libraryRelativePath: String
+    var contentHash: String
     var formatRawValue: String
     var dateAdded: Date
     var isPrivate: Bool
@@ -29,6 +30,7 @@ final class Book {
         author: String,
         coverImageData: Data? = nil,
         libraryRelativePath: String,
+        contentHash: String,
         format: BookFormat,
         dateAdded: Date = .now,
         isPrivate: Bool = false
@@ -38,6 +40,7 @@ final class Book {
         self.author = author
         self.coverImageData = coverImageData
         self.libraryRelativePath = libraryRelativePath
+        self.contentHash = contentHash
         self.formatRawValue = format.rawValue
         self.dateAdded = dateAdded
         self.isPrivate = isPrivate

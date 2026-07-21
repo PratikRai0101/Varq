@@ -19,6 +19,7 @@ final class Book {
     var author: String
     var coverImageData: Data?
     var libraryRelativePath: String // relative path inside Varq's managed library
+    var contentHash: String // SHA-256 digest used for duplicate detection
     var format: BookFormat // enum: epub, pdf, cbz, cbr
     var dateAdded: Date
     var isPrivate: Bool

@@ -19,6 +19,7 @@ struct LibraryModelPersistenceTests {
             title: "A Book",
             author: "An Author",
             libraryRelativePath: libraryRelativePath,
+            contentHash: "fixture-hash",
             format: .epub
         )
         let progress = ReadingProgress(
@@ -44,6 +45,7 @@ struct LibraryModelPersistenceTests {
         #expect(savedBook.title == "A Book")
         #expect(savedBook.author == "An Author")
         #expect(savedBook.libraryRelativePath == libraryRelativePath)
+        #expect(savedBook.contentHash == "fixture-hash")
         #expect(savedBook.format == .epub)
         #expect(savedBook.readingProgress?.percentComplete == 0.25)
         #expect(savedBook.highlights.count == 1)
