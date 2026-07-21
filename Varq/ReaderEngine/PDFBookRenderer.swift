@@ -47,6 +47,11 @@ final class PDFBookRenderer: BookRenderer {
         try await go(to: initialLocator)
     }
 
+    func close() async {
+        navigationView.document = nil
+        currentLocator = nil
+    }
+
     func goForward() async throws -> Bool {
         guard let currentLocator,
               let document = navigationView.document,
