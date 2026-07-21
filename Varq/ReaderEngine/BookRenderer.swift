@@ -12,3 +12,9 @@ protocol BookRenderer: AnyObject {
     func goBackward() async throws -> Bool
     func go(to locator: BookLocator) async throws
 }
+
+enum BookRendererError: Error, Equatable {
+    case cannotOpenDocument
+    case incompatibleLocatorFormat(BookFormat)
+    case invalidLocator
+}
