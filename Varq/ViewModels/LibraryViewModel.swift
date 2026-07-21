@@ -89,7 +89,18 @@ final class LibraryViewModel {
             return
         }
         let filtered = books.filter { book in
-            book.collections?.contains(where: { $0.id == selected.id }) ?? false
+            switch selected.name {
+            case "Currently Reading":
+                guard let progress = book.readingProgress else { return false }
+                return progress.percentComplete > 0 && progress.percentComplete < 1
+            case "Finished":
+                guard let progress = book.readingProgress else { return false }
+                return progress.percentComplete >= 1
+            case "Favorites", "Want to Read":
+                return book.collections?.contains(where: { $0.id == selected.id }) ?? false
+            default:
+                return book.collections?.contains(where: { $0.id == selected.id }) ?? false
+            }
         }
         books = filtered.sorted { lhs, rhs in
             switch sortOrder {

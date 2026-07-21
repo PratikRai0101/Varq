@@ -16,6 +16,7 @@ struct LibraryView: View {
     @State private var isAddingCollection = false
     @State private var bookToRefresh: Book?
     @State private var isPrivateBookErrorPresented = false
+    @State private var isSettingsPresented = false
 
     let importViewModel: ImportViewModel
     let managedLibraryDirectory: URL
@@ -78,6 +79,9 @@ struct LibraryView: View {
             }
         } message: {
             Text(privateBookViewModel.errorMessage ?? "An unknown error occurred.")
+        }
+        .sheet(isPresented: $isSettingsPresented) {
+            SettingsView()
         }
     }
 
@@ -147,6 +151,11 @@ struct LibraryView: View {
                         chooseFolder()
                     }
                 }
+                ToolbarItem {
+                    Button("Settings", systemImage: "gearshape") {
+                        isSettingsPresented = true
+                    }
+                }
         }
     }
 
@@ -196,12 +205,6 @@ struct LibraryView: View {
 
     @ViewBuilder
     private func bookMenu(for book: Book) -> some View {
-        if book.readingProgress != nil {
-            Button("Resume reading", systemImage: "bookmark.fill") {
-                // Navigation is handled by the card tap; this item is informational.
-            }
-        }
-
         if book.isPrivate {
             Button("Unmark as private", systemImage: "lock.open") {
                 privateBookViewModel.unmarkPrivate(

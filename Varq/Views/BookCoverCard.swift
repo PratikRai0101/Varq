@@ -10,6 +10,20 @@ struct BookCoverCard: View {
                 .aspectRatio(0.68, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.compact))
 
+            if let progress = book.readingProgress, progress.percentComplete > 0 {
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Rectangle()
+                            .fill(Color.varqIndigo.opacity(0.5))
+                        Rectangle()
+                            .fill(Color.varqSaffron)
+                            .frame(width: proxy.size.width * CGFloat(progress.percentComplete))
+                    }
+                }
+                .frame(height: 4)
+                .clipShape(RoundedRectangle(cornerRadius: 2))
+            }
+
             VStack(alignment: .leading, spacing: VarqSpacing.compact) {
                 Text(verbatim: book.title)
                     .font(VarqTypography.uiMedium(.headline))
@@ -56,24 +70,6 @@ struct BookCoverCard: View {
                     .background(Color.varqIndigo.opacity(0.72))
                     .clipShape(Circle())
                     .padding(VarqSpacing.compact)
-            }
-
-            if let progress = book.readingProgress, progress.percentComplete > 0 {
-                VStack {
-                    Spacer()
-                    GeometryReader { proxy in
-                        ZStack(alignment: .leading) {
-                            Rectangle()
-                                .fill(Color.varqIndigo.opacity(0.5))
-                            Rectangle()
-                                .fill(Color.varqSaffron)
-                                .frame(width: proxy.size.width * CGFloat(progress.percentComplete))
-                        }
-                    }
-                    .frame(height: 4)
-                    .clipShape(RoundedRectangle(cornerRadius: 2))
-                }
-                .padding(VarqSpacing.compact)
             }
         }
     }
