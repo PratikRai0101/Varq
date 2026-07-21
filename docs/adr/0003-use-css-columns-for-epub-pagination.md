@@ -34,7 +34,7 @@ Each format adapter owns the rendering-specific mechanics behind this small inte
 
 ### `BookLocator` schema
 
-`BookLocator` is the canonical Codable value serialized into `ReadingProgress.locatorData` and `Highlight.locatorData`.
+`BookLocator` is the canonical Codable value serialized into `ReadingProgress.locatorData`. Highlights use the separate `TextHighlightAnchor` contract in ADR 0004 because a reader position does not identify a selected text range.
 
 | Field | Type | Meaning |
 |---|---|---|
