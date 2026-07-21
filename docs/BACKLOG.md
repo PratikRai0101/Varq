@@ -25,7 +25,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] `ImportService`: EPUB import via the native EPUB parser, extract title/author/cover
 - [x] `ImportService`: PDF import via PDFKit
 - [x] `ImportService`: CBZ import (archive extraction + first-page-as-cover)
-- [ ] `ImportService`: CBR import (requires an App Store-compatible RAR decoder)
+- CBR import is deferred to v1.1+; see the CBR deferral decision in `docs/PRD.md` section 8.
 - [x] Duplicate detection via content hash
 - [x] Drag-and-drop target on LibraryView + `NSOpenPanel` fallback
 - [x] Unit tests against fixture files in `VarqTests/Fixtures/` (small, permissively-licensed samples only)
@@ -44,8 +44,8 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [ ] Light / dark / sepia page-tone modes (independent toggle per `design-system.md`)
 - [ ] Custom warm-toned page-turn animation
 
-## Phase 6 — Comics/manga mode
-- [ ] CBZ/CBR-specific reader path (image sequence, not the text reader engine)
+## Phase 6 — CBZ comics/manga mode
+- [ ] CBZ-specific reader path (image sequence, not the text reader engine)
 - [ ] Right-to-left toggle
 - [ ] Dual-page spread option
 - [ ] Page-fit options (fit width / fit height / actual size)
@@ -74,4 +74,4 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [ ] Submit for App Store review
 
 ## Explicitly out of scope for this backlog (v1.1+, see PRD section 8)
-MOBI/AZW3/FB2 conversion, metadata auto-scraper, on-device AI features, CloudKit sync/Handoff, bionic reading/RSVP, OPDS, reading stats, Siri/Shortcuts/App Intents, iOS app. Do not pull these into the active backlog without updating `PRD.md` first.
+CBR support (unless `docs/PRD.md`'s CBR deferral decision has been revisited), MOBI/AZW3/FB2 conversion, metadata auto-scraper, on-device AI features, CloudKit sync/Handoff, bionic reading/RSVP, OPDS, reading stats, Siri/Shortcuts/App Intents, iOS app. Do not pull these into the active backlog without updating `PRD.md` first.

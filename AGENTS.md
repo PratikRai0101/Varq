@@ -51,7 +51,7 @@ docs/
 
 Before implementing any feature, check `docs/PRD.md` section 7 (MVP scope) and section 8 (v1.1+ roadmap). If a request falls under section 8, implement it in an extensible way (don't hardcode assumptions that block it later) but do not build the full feature unless explicitly asked — flag that it's a v1.1+ item and confirm scope before proceeding.
 
-Supported file formats for MVP: `.epub`, `.pdf`, `.cbz`, `.cbr` only. MOBI/AZW3/FB2 conversion is explicitly out of scope for MVP — do not add partial/broken support for these; either fully implement per an approved plan or leave them entirely unhandled with a clear "unsupported format" user-facing message.
+Supported file formats for MVP: `.epub`, `.pdf`, `.cbz` only. CBR is deferred to v1.1+ (see `docs/PRD.md` section 8); MOBI/AZW3/FB2 conversion is also explicitly out of scope for MVP — do not add partial/broken support for these; either fully implement per an approved plan or leave them entirely unhandled with a clear "unsupported format" user-facing message.
 
 ## Testing instructions
 
