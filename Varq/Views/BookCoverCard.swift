@@ -26,6 +26,7 @@ struct BookCoverCard: View {
             .padding(.horizontal, VarqSpacing.compact)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(.bottom, VarqSpacing.compact)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(book.title) by \(book.author)")
     }
