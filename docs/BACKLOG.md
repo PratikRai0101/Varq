@@ -54,7 +54,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] Text selection → highlight creation UI (color picker from design system palette)
 - [x] Optional note attachment to a highlight
 - [x] `Highlight` list view per book
-- [ ] `ExportService`: Markdown export (Obsidian-compatible frontmatter)
+- [x] `ExportService`: Markdown export (Obsidian-compatible frontmatter)
 - [ ] `ExportService`: JSON export
 - [ ] Unit tests for export format correctness
 
