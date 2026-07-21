@@ -61,7 +61,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 ## Phase 8 — Private shelf (Touch ID)
 - [x] `BiometricGateService`: LocalAuthentication wrapper
 - [x] Mark-as-private UI flow
-- [ ] CryptoKit encryption at rest + Keychain-stored key with biometric access control
+- [x] CryptoKit encryption at rest + Keychain-stored key with biometric access control
 - [ ] Session-based unlock behavior
 - [ ] Manual security review pass before considering this feature complete — this is the highest-stakes feature in the app from a trust standpoint
 

@@ -9,6 +9,7 @@ final class ReaderViewModel {
     private let renderer: any BookRenderer
     private let book: Book
     private let bookURL: URL
+    private let privateBookSessionService: PrivateBookSessionService
     private var modelContext: ModelContext?
 
     private(set) var currentLocator: BookLocator?
@@ -19,10 +20,16 @@ final class ReaderViewModel {
     var supportsComicControls: Bool { renderer.supportedFormat == .cbz }
     var supportsTextHighlights: Bool { renderer is any TextSelectionProviding }
 
-    init(book: Book, bookURL: URL, renderer: some BookRenderer) {
+    init(
+        book: Book,
+        bookURL: URL,
+        renderer: some BookRenderer,
+        privateBookSessionService: PrivateBookSessionService = PrivateBookSessionService()
+    ) {
         self.book = book
         self.bookURL = bookURL
         self.renderer = renderer
+        self.privateBookSessionService = privateBookSessionService
     }
 
     func configurePersistence(using modelContext: ModelContext) {
@@ -32,7 +39,8 @@ final class ReaderViewModel {
     func open(at locator: BookLocator? = nil) async {
         do {
             let initialLocator = locator ?? storedLocator()
-            try await renderer.open(bookURL: bookURL, at: initialLocator)
+            let readerURL = try privateBookSessionService.readerURL(for: book, managedFileURL: bookURL)
+            try await renderer.open(bookURL: readerURL, at: initialLocator)
             currentLocator = renderer.currentLocator
             errorMessage = nil
         } catch {
@@ -144,6 +152,7 @@ final class ReaderViewModel {
     func close() async {
         persistCurrentLocator()
         await renderer.close()
+        privateBookSessionService.closeSession()
         currentLocator = nil
     }
 
