@@ -53,7 +53,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 ## Phase 7 — Highlights & notes
 - [x] Text selection → highlight creation UI (color picker from design system palette)
 - [x] Optional note attachment to a highlight
-- [ ] `Highlight` list view per book
+- [x] `Highlight` list view per book
 - [ ] `ExportService`: Markdown export (Obsidian-compatible frontmatter)
 - [ ] `ExportService`: JSON export
 - [ ] Unit tests for export format correctness

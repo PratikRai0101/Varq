@@ -68,6 +68,14 @@ struct ReaderView: View {
         .toolbar {
             if viewModel.supportsTextHighlights {
                 ToolbarItem {
+                    NavigationLink {
+                        HighlightsListView(book: viewModel.highlightedBook)
+                    } label: {
+                        Label("Highlights", systemImage: "list.bullet")
+                    }
+                }
+
+                ToolbarItem {
                     HighlightCreationControls { color in
                         Task { highlightForNote = await viewModel.createHighlight(color: color) }
                     }

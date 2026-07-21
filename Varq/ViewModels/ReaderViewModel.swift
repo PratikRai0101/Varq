@@ -15,6 +15,7 @@ final class ReaderViewModel {
     private(set) var readingAppearance = ReadingAppearance()
     private(set) var errorMessage: String?
     var rendererView: NSView { renderer.view }
+    var highlightedBook: Book { book }
     var supportsComicControls: Bool { renderer.supportedFormat == .cbz }
     var supportsTextHighlights: Bool { renderer is any TextSelectionProviding }
 
