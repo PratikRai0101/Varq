@@ -10,7 +10,7 @@ struct HighlightsListView: View {
     var body: some View {
         Group {
             if viewModel.highlights.isEmpty {
-                ContentUnavailableView("No highlights yet", systemImage: "highlighter", description: Text("Select EPUB text in the reader to save a highlight."))
+                ContentUnavailableView("No highlights yet", systemImage: "highlighter", description: Text("Select text in the reader to save a highlight."))
             } else {
                 List(viewModel.highlights, id: \.id) { highlight in
                     Button {
@@ -27,8 +27,8 @@ struct HighlightsListView: View {
                                     .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
                                 Spacer()
                                 Image(systemName: "arrow.forward")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(VarqTypography.ui(.caption))
+                                    .foregroundStyle(colorScheme == .dark ? Color.varqSaffron : Color.varqTerracotta)
                             }
                             if let note = highlight.note {
                                 Text(note)

@@ -18,7 +18,7 @@ struct HighlightCreationControls: View {
                 }
             }
         }
-        .accessibilityHint("Select text in an EPUB page, then choose a highlight color.")
+        .accessibilityHint("Select text in the reader, then choose a highlight color.")
     }
 
     private func swatchColor(for color: HighlightColorTag) -> Color {

@@ -146,16 +146,11 @@ final class ReaderViewModel {
     }
 
     func navigateToHighlight(_ highlight: Highlight) async {
-        guard let anchor = try? JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData) else {
-            return
-        }
         do {
-            try await renderer.go(to: anchor.locator)
+            let anchor = try JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData)
+            try await renderer.navigate(to: anchor)
             currentLocator = renderer.currentLocator
             persistCurrentLocator()
-            if let epubRenderer = renderer as? EpubWebRenderer {
-                await epubRenderer.scrollToHighlight(highlight)
-            }
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription

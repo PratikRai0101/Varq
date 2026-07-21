@@ -115,9 +115,57 @@ struct ReaderViewModelTests {
         #expect(highlight.selectedText == "selected")
         #expect(highlight.colorTag == HighlightColorTag.saffron.rawValue)
         #expect(try JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData) == anchor)
+        #expect(renderer.renderedHighlightIDs == [[highlight.id]])
 
         viewModel.updateNote("A useful passage", for: highlight)
         #expect(highlight.note == "A useful passage")
+    }
+
+    @Test func rendersPersistedHighlightsThroughTheRendererInterface() async throws {
+        let locator = try epubLocator(progression: 0)
+        let anchor = try TextHighlightAnchor(
+            locator: locator,
+            startOffset: 3,
+            endOffset: 11,
+            quote: TextQuoteSelector(exact: "selected")
+        )
+        let renderer = FakeBookRenderer(locator: locator)
+        let book = book()
+        let highlight = Highlight(
+            locatorData: try JSONEncoder().encode(anchor),
+            selectedText: anchor.quote.exact,
+            colorTag: HighlightColorTag.saffron.rawValue
+        )
+        book.highlights = [highlight]
+        let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
+
+        await viewModel.open()
+
+        #expect(renderer.renderedHighlightIDs == [[highlight.id]])
+    }
+
+    @Test func navigatesToAHighlightThroughTheRendererInterface() async throws {
+        let initialLocator = try epubLocator(progression: 0)
+        let highlightLocator = try epubLocator(progression: 0.75)
+        let anchor = try TextHighlightAnchor(
+            locator: highlightLocator,
+            startOffset: 3,
+            endOffset: 11,
+            quote: TextQuoteSelector(exact: "selected")
+        )
+        let highlight = Highlight(
+            locatorData: try JSONEncoder().encode(anchor),
+            selectedText: anchor.quote.exact,
+            colorTag: HighlightColorTag.saffron.rawValue
+        )
+        let renderer = FakeBookRenderer(locator: initialLocator)
+        let viewModel = ReaderViewModel(book: book(), bookURL: bookURL, renderer: renderer)
+
+        await viewModel.navigateToHighlight(highlight)
+
+        #expect(renderer.navigatedHighlightAnchor == anchor)
+        #expect(viewModel.currentLocator == highlightLocator)
+        #expect(viewModel.errorMessage == nil)
     }
 
     @Test func restoresAndClearsThePersistedLocatorWhenClosing() async throws {
@@ -187,6 +235,8 @@ private final class FakeBookRenderer: BookRenderer, TextSelectionProviding {
     var readingProgressFraction: Double { reportedProgressFraction ?? currentLocator?.progression ?? 0 }
     private(set) var openedLocator: BookLocator?
     private(set) var updatedAppearance: ReadingAppearance?
+    private(set) var renderedHighlightIDs: [[UUID]] = []
+    private(set) var navigatedHighlightAnchor: TextHighlightAnchor?
     private(set) var didClose = false
 
     init(
@@ -212,6 +262,15 @@ private final class FakeBookRenderer: BookRenderer, TextSelectionProviding {
 
     func selectedTextHighlightAnchor() async throws -> TextHighlightAnchor? {
         selectedAnchor
+    }
+
+    func renderHighlights(_ highlights: [Highlight]) async {
+        renderedHighlightIDs.append(highlights.map(\.id))
+    }
+
+    func navigate(to highlightAnchor: TextHighlightAnchor) async throws {
+        navigatedHighlightAnchor = highlightAnchor
+        try await go(to: highlightAnchor.locator)
     }
 
     func close() async {

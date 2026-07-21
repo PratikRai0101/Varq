@@ -196,10 +196,14 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         _ = try? await evaluate(script: js)
     }
 
-    func scrollToHighlight(_ highlight: Highlight) async {
-        guard let anchor = try? JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData),
-              anchor.precision == .exactTextRange,
-              let start = anchor.startOffset else {
+    func navigate(to highlightAnchor: TextHighlightAnchor) async throws {
+        try await go(to: highlightAnchor.locator)
+        await scrollToHighlight(highlightAnchor)
+    }
+
+    private func scrollToHighlight(_ highlightAnchor: TextHighlightAnchor) async {
+        guard highlightAnchor.precision == .exactTextRange,
+              let start = highlightAnchor.startOffset else {
             return
         }
         let js = """

@@ -2,19 +2,39 @@ import AppKit
 import PDFKit
 import SwiftUI
 
+struct PDFTextSelection {
+    let text: String
+    let bounds: CGRect
+}
+
 @MainActor
 protocol PDFNavigationView: AnyObject {
     var renderedView: NSView { get }
     var document: PDFDocument? { get set }
-    var selectedText: String? { get }
 
+    func selectedTextSelection(on page: PDFPage) -> PDFTextSelection?
     func go(to page: PDFPage)
     func setPageTone(_ pageTone: ReaderPageTone)
 }
 
 extension PDFView: PDFNavigationView {
     var renderedView: NSView { self }
-    var selectedText: String? { currentSelection?.string }
+
+    func selectedTextSelection(on page: PDFPage) -> PDFTextSelection? {
+        guard let selection = currentSelection,
+              selection.pages.count == 1,
+              selection.pages.first === page,
+              let text = selection.string?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else {
+            return nil
+        }
+
+        let bounds = selection.bounds(for: page)
+        guard !bounds.isNull, !bounds.isEmpty else {
+            return nil
+        }
+        return PDFTextSelection(text: text, bounds: bounds)
+    }
 
     func setPageTone(_ pageTone: ReaderPageTone) {
         switch pageTone {
@@ -72,14 +92,16 @@ final class PDFBookRenderer: BookRenderer, TextSelectionProviding {
 
     func selectedTextHighlightAnchor() async throws -> TextHighlightAnchor? {
         guard let currentLocator,
-              let selectedText = navigationView.selectedText?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !selectedText.isEmpty else {
+              let document = navigationView.document,
+              let page = document.page(at: currentLocator.spineIndex),
+              let selection = navigationView.selectedTextSelection(on: page),
+              let approximatePosition = normalizedVerticalPosition(of: selection.bounds, on: page) else {
             return nil
         }
         return try TextHighlightAnchor(
             coarsePDFLocator: currentLocator,
-            approximatePosition: 0.5,
-            quote: TextQuoteSelector(exact: selectedText)
+            approximatePosition: approximatePosition,
+            quote: TextQuoteSelector(exact: selection.text)
         )
     }
 
@@ -110,13 +132,25 @@ final class PDFBookRenderer: BookRenderer, TextSelectionProviding {
                 continue
             }
 
+            guard let approximatePosition = anchor.approximatePosition else {
+                continue
+            }
+
             let pageBounds = page.bounds(for: .mediaBox)
-            let yOffset = pageBounds.height * (anchor.approximatePosition ?? 0.5)
-            let highlightHeight: CGFloat = 20
+            guard pageBounds.width > 0, pageBounds.height > 0 else {
+                continue
+            }
+            let horizontalInset = min(VarqSpacing.regular, pageBounds.width / 4)
+            let highlightHeight = min(VarqSpacing.regular, pageBounds.height * 0.04)
+            let midpoint = pageBounds.minY + pageBounds.height * approximatePosition
+            let y = min(
+                max(midpoint - highlightHeight / 2, pageBounds.minY),
+                pageBounds.maxY - highlightHeight
+            )
             let rect = CGRect(
-                x: pageBounds.origin.x + 20,
-                y: pageBounds.origin.y + yOffset - highlightHeight / 2,
-                width: pageBounds.width - 40,
+                x: pageBounds.minX + horizontalInset,
+                y: y,
+                width: pageBounds.width - horizontalInset * 2,
                 height: highlightHeight
             )
 
@@ -125,6 +159,18 @@ final class PDFBookRenderer: BookRenderer, TextSelectionProviding {
             annotation.contents = "varq-highlight"
             page.addAnnotation(annotation)
         }
+    }
+
+    private func normalizedVerticalPosition(of selectionBounds: CGRect, on page: PDFPage) -> Double? {
+        let pageBounds = page.bounds(for: .mediaBox)
+        guard pageBounds.height > 0 else {
+            return nil
+        }
+        let position = (selectionBounds.midY - pageBounds.minY) / pageBounds.height
+        guard position.isFinite else {
+            return nil
+        }
+        return min(max(position, 0), 1)
     }
 
     private func nsColor(for colorTag: String) -> NSColor {

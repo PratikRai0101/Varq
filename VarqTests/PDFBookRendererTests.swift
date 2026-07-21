@@ -19,16 +19,53 @@ struct PDFBookRendererTests {
         #expect(renderer.currentLocator == firstPageLocator)
     }
 
-    @Test func createsACoarseHighlightAnchorFromSelectedPdfText() async throws {
+    @Test func createsACoarseHighlightAnchorAtTheSelectedPdfPosition() async throws {
         let navigationView = FakePDFNavigationView()
-        navigationView.selectedText = "Selected PDF passage"
         let renderer = PDFBookRenderer(navigationView: navigationView)
         try await renderer.open(bookURL: pdfFixtureURL, at: nil)
+        let page = try #require(navigationView.document?.page(at: 0))
+        let pageBounds = page.bounds(for: .mediaBox)
+        let selectionBounds = CGRect(
+            x: pageBounds.minX + pageBounds.width * 0.2,
+            y: pageBounds.minY + pageBounds.height * 0.7,
+            width: pageBounds.width * 0.5,
+            height: pageBounds.height * 0.05
+        )
+        navigationView.textSelection = PDFTextSelection(
+            text: "Selected PDF passage",
+            bounds: selectionBounds
+        )
 
         let anchor = try #require(try await renderer.selectedTextHighlightAnchor())
 
         #expect(anchor.precision == .coarsePagePosition)
         #expect(anchor.quote.exact == "Selected PDF passage")
+        let expectedPosition = (selectionBounds.midY - pageBounds.minY) / pageBounds.height
+        #expect(abs((anchor.approximatePosition ?? -1) - expectedPosition) < 0.001)
+    }
+
+    @Test func restoresCoarsePdfHighlightsAtTheirSavedVerticalPosition() async throws {
+        let navigationView = FakePDFNavigationView()
+        let renderer = PDFBookRenderer(navigationView: navigationView)
+        try await renderer.open(bookURL: pdfFixtureURL, at: nil)
+        let page = try #require(navigationView.document?.page(at: 0))
+        let anchor = try TextHighlightAnchor(
+            coarsePDFLocator: BookLocator(format: .pdf, spineIndex: 0, progression: 0),
+            approximatePosition: 0.25,
+            quote: TextQuoteSelector(exact: "Saved PDF passage")
+        )
+        let highlight = Highlight(
+            locatorData: try JSONEncoder().encode(anchor),
+            selectedText: anchor.quote.exact,
+            colorTag: HighlightColorTag.saffron.rawValue
+        )
+
+        await renderer.renderHighlights([highlight])
+
+        let annotation = try #require(page.annotations.first { $0.contents == "varq-highlight" })
+        let pageBounds = page.bounds(for: .mediaBox)
+        let expectedMidpoint = pageBounds.minY + pageBounds.height * 0.25
+        #expect(abs(annotation.bounds.midY - expectedMidpoint) < 0.001)
     }
 
     @Test func appliesTheSelectedPageToneToThePdfView() async throws {
@@ -65,11 +102,15 @@ struct PDFBookRendererTests {
 @MainActor
 private final class FakePDFNavigationView: NSView, PDFNavigationView {
     var document: PDFDocument?
-    var selectedText: String?
+    var textSelection: PDFTextSelection?
     private(set) var displayedPage: PDFPage?
     private(set) var pageTone: ReaderPageTone?
 
     var renderedView: NSView { self }
+
+    func selectedTextSelection(on page: PDFPage) -> PDFTextSelection? {
+        textSelection
+    }
 
     func go(to page: PDFPage) {
         displayedPage = page
