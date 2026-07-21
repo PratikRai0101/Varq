@@ -78,7 +78,9 @@ struct ReaderView: View {
             if viewModel.supportsTextHighlights {
                 ToolbarItem {
                     NavigationLink {
-                        HighlightsListView(book: viewModel.highlightedBook)
+                        HighlightsListView(book: viewModel.highlightedBook) { highlight in
+                            Task { await viewModel.navigateToHighlight(highlight) }
+                        }
                     } label: {
                         Label("Highlights", systemImage: "list.bullet")
                     }

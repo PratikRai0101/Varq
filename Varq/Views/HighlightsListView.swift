@@ -2,7 +2,9 @@ import SwiftUI
 
 struct HighlightsListView: View {
     let book: Book
+    var navigateToHighlight: ((Highlight) -> Void)?
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel = HighlightsViewModel()
 
     var body: some View {
@@ -11,22 +13,32 @@ struct HighlightsListView: View {
                 ContentUnavailableView("No highlights yet", systemImage: "highlighter", description: Text("Select EPUB text in the reader to save a highlight."))
             } else {
                 List(viewModel.highlights, id: \.id) { highlight in
-                    VStack(alignment: .leading, spacing: VarqSpacing.compact) {
-                        HStack {
-                            Circle()
-                                .fill(color(for: highlight.colorTag))
-                                .frame(width: VarqSpacing.compact, height: VarqSpacing.compact)
-                            Text(highlight.selectedText)
-                                .font(VarqTypography.reading())
-                                .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
+                    Button {
+                        navigateToHighlight?(highlight)
+                        dismiss()
+                    } label: {
+                        VStack(alignment: .leading, spacing: VarqSpacing.compact) {
+                            HStack {
+                                Circle()
+                                    .fill(color(for: highlight.colorTag))
+                                    .frame(width: VarqSpacing.compact, height: VarqSpacing.compact)
+                                Text(highlight.selectedText)
+                                    .font(VarqTypography.reading())
+                                    .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
+                                Spacer()
+                                Image(systemName: "arrow.forward")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if let note = highlight.note {
+                                Text(note)
+                                    .font(VarqTypography.ui(.body))
+                                    .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
+                            }
                         }
-                        if let note = highlight.note {
-                            Text(note)
-                                .font(VarqTypography.ui(.body))
-                                .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
-                        }
+                        .padding(.vertical, VarqSpacing.compact)
                     }
-                    .padding(.vertical, VarqSpacing.compact)
+                    .buttonStyle(.plain)
                 }
                 .scrollContentBackground(.hidden)
             }
