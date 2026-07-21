@@ -10,6 +10,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
     private var publication: EpubPublication?
     private var appearance = ReadingAppearance()
     private var navigationContinuation: CheckedContinuation<Void, Error>?
+    private var storedHighlights: [Highlight] = []
 
     private(set) var currentLocator: BookLocator?
     var view: NSView { webView }
@@ -118,6 +119,126 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         )
     }
 
+    func renderHighlights(_ highlights: [Highlight]) async {
+        storedHighlights = highlights
+        let anchors: [[String: Any]] = highlights.compactMap { highlight in
+            guard let anchor = try? JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData),
+                  anchor.precision == .exactTextRange,
+                  let start = anchor.startOffset,
+                  let end = anchor.endOffset,
+                  anchor.locator.spineIndex == currentLocator?.spineIndex else {
+                return nil
+            }
+            return [
+                "start": start,
+                "end": end,
+                "color": highlight.colorTag
+            ]
+        }
+        guard !anchors.isEmpty else { return }
+
+        let js = """
+        (() => {
+            document.querySelectorAll('mark.varq-highlight').forEach(el => {
+                const parent = el.parentNode;
+                while (el.firstChild) parent.insertBefore(el.firstChild, el);
+                parent.removeChild(el);
+                parent.normalize();
+            });
+
+            const colorMap = {
+                saffron: 'rgba(230, 170, 90, 0.35)',
+                terracotta: 'rgba(181, 80, 42, 0.35)',
+                maroon: 'rgba(122, 46, 29, 0.35)'
+            };
+
+            const highlights = \(serializeAnchors(anchors));
+
+            function createTextWalker() {
+                const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+                let offset = 0;
+                const nodes = [];
+                let node;
+                while (node = walker.nextNode()) {
+                    nodes.push({ node, start: offset, end: offset + node.textContent.length });
+                    offset += node.textContent.length;
+                }
+                return nodes;
+            }
+
+            function findOffset(nodes, target) {
+                for (const n of nodes) {
+                    if (target >= n.start && target <= n.end) {
+                        return { node: n.node, offset: target - n.start };
+                    }
+                }
+                return null;
+            }
+
+            const nodes = createTextWalker();
+            for (const h of highlights) {
+                const startInfo = findOffset(nodes, h.start);
+                const endInfo = findOffset(nodes, h.end);
+                if (!startInfo || !endInfo) continue;
+                try {
+                    const range = document.createRange();
+                    range.setStart(startInfo.node, startInfo.offset);
+                    range.setEnd(endInfo.node, endInfo.offset);
+                    const mark = document.createElement('mark');
+                    mark.className = 'varq-highlight';
+                    mark.style.background = colorMap[h.color] || colorMap.saffron;
+                    mark.style.color = 'inherit';
+                    range.surroundContents(mark);
+                } catch (e) {}
+            }
+        })();
+        """
+        _ = try? await evaluate(script: js)
+    }
+
+    func scrollToHighlight(_ highlight: Highlight) async {
+        guard let anchor = try? JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData),
+              anchor.precision == .exactTextRange,
+              let start = anchor.startOffset else {
+            return
+        }
+        let js = """
+        (() => {
+            function createTextWalker() {
+                const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+                let offset = 0;
+                const nodes = [];
+                let node;
+                while (node = walker.nextNode()) {
+                    nodes.push({ node, start: offset, end: offset + node.textContent.length });
+                    offset += node.textContent.length;
+                }
+                return nodes;
+            }
+            function findOffset(nodes, target) {
+                for (const n of nodes) {
+                    if (target >= n.start && target <= n.end) {
+                        return { node: n.node, offset: target - n.start };
+                    }
+                }
+                return null;
+            }
+            const nodes = createTextWalker();
+            const info = findOffset(nodes, \(start));
+            if (info) {
+                const range = document.createRange();
+                range.setStart(info.node, info.offset);
+                range.collapse(true);
+                const rect = range.getBoundingClientRect();
+                if (rect.top < 0 || rect.bottom > window.innerHeight) {
+                    info.node.parentElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                }
+            }
+        })();
+        """
+        _ = try? await evaluate(script: js)
+    }
+
     func close() async {
         if let publication {
             try? await publicationService.remove(publication)
@@ -144,7 +265,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         guard publication.spine.indices.contains(nextSpineIndex) else {
             return false
         }
-        try await loadSpineResource(at: nextSpineIndex, progression: 0)
+        try await loadSpineResource(at: nextSpineIndex, progression: 0, highlights: storedHighlights)
         return true
     }
 
@@ -165,7 +286,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         guard publication.spine.indices.contains(previousSpineIndex) else {
             return false
         }
-        try await loadSpineResource(at: previousSpineIndex, progression: 1)
+        try await loadSpineResource(at: previousSpineIndex, progression: 1, highlights: storedHighlights)
         return true
     }
 
@@ -179,7 +300,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
             throw BookRendererError.invalidLocator
         }
 
-        try await loadSpineResource(at: locator.spineIndex, progression: locator.progression)
+        try await loadSpineResource(at: locator.spineIndex, progression: locator.progression, highlights: storedHighlights)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -215,7 +336,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         )
     }
 
-    private func loadSpineResource(at spineIndex: Int, progression: Double) async throws {
+    private func loadSpineResource(at spineIndex: Int, progression: Double, highlights: [Highlight] = []) async throws {
         guard let publication, publication.spine.indices.contains(spineIndex) else {
             throw BookRendererError.invalidLocator
         }
@@ -230,6 +351,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
             resourceHref: resource.href,
             progression: actualProgression
         )
+        await renderHighlights(highlights)
     }
 
     private func load(_ resource: EpubSpineResource, allowingReadAccessTo directory: URL) async throws {
@@ -372,6 +494,16 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
             throw BookRendererError.invalidLocator
         }
         return try JSONDecoder().decode(PaginationMetrics.self, from: data)
+    }
+
+    private func serializeAnchors(_ anchors: [[String: Any]]) -> String {
+        let items = anchors.map { anchor -> String in
+            let start = anchor["start"] as! Int
+            let end = anchor["end"] as! Int
+            let color = anchor["color"] as! String
+            return "{\"start\":\(start),\"end\":\(end),\"color\":\"\(color)\"}"
+        }
+        return "[" + items.joined(separator: ",") + "]"
     }
 
     private func evaluate(script: String) async throws -> Any {

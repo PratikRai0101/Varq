@@ -20,6 +20,8 @@ extension BookRenderer {
     var readingProgressFraction: Double {
         currentLocator?.progression ?? 0
     }
+
+    func renderHighlights(_ highlights: [Highlight]) async {}
 }
 
 enum BookRendererError: Error, Equatable {
