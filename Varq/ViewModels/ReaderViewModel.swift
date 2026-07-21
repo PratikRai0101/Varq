@@ -15,6 +15,7 @@ final class ReaderViewModel {
     private(set) var readingAppearance = ReadingAppearance()
     private(set) var errorMessage: String?
     var rendererView: NSView { renderer.view }
+    var supportsComicControls: Bool { renderer.supportedFormat == .cbz }
 
     init(book: Book, bookURL: URL, renderer: some BookRenderer) {
         self.book = book
@@ -43,6 +44,12 @@ final class ReaderViewModel {
 
     func goBackward() async -> Bool {
         await navigate { try await renderer.goBackward() }
+    }
+
+    func setComicReadingDirection(_ readingDirection: ComicReadingDirection) async {
+        var appearance = readingAppearance
+        appearance.comicReadingDirection = readingDirection
+        await updateReadingAppearance(appearance)
     }
 
     func setPageTone(_ pageTone: ReaderPageTone) async {

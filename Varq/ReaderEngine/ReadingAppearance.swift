@@ -29,6 +29,18 @@ enum ReaderPageTone: String, CaseIterable, Codable, Sendable {
     }
 }
 
+enum ComicReadingDirection: String, CaseIterable, Codable, Sendable {
+    case leftToRight
+    case rightToLeft
+
+    var displayName: String {
+        switch self {
+        case .leftToRight: "Left to right"
+        case .rightToLeft: "Right to left"
+        }
+    }
+}
+
 enum ReadingFontFamily: String, CaseIterable, Codable, Sendable {
     case georgia
     case newYork
@@ -61,6 +73,7 @@ struct ReadingAppearance: Codable, Equatable, Sendable {
     static let horizontalMarginStep = 8.0
 
     var pageTone: ReaderPageTone
+    var comicReadingDirection: ComicReadingDirection
     var fontFamily: ReadingFontFamily
     var fontSize: Double
     var lineHeight: Double
@@ -68,12 +81,14 @@ struct ReadingAppearance: Codable, Equatable, Sendable {
 
     init(
         pageTone: ReaderPageTone = .sepia,
+        comicReadingDirection: ComicReadingDirection = .leftToRight,
         fontFamily: ReadingFontFamily = .georgia,
         fontSize: Double = Self.defaultFontSize,
         lineHeight: Double = Self.defaultLineHeight,
         horizontalMargin: Double = Self.defaultHorizontalMargin
     ) {
         self.pageTone = pageTone
+        self.comicReadingDirection = comicReadingDirection
         self.fontFamily = fontFamily
         self.fontSize = fontSize
         self.lineHeight = lineHeight

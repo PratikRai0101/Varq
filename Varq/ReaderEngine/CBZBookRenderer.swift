@@ -42,6 +42,7 @@ final class CBZBookRenderer: BookRenderer {
     private let pageView: any CBZPageView
     private let publicationService: CbzPublicationService
     private var publication: CbzPublication?
+    private var readingDirection: ComicReadingDirection = .leftToRight
     private(set) var currentLocator: BookLocator?
 
     var view: NSView { pageView.renderedView }
@@ -80,7 +81,7 @@ final class CBZBookRenderer: BookRenderer {
     }
 
     func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
-        // Image pages retain their source artwork; comic-specific presentation is configured separately.
+        readingDirection = appearance.comicReadingDirection
     }
 
     func close() async {
@@ -93,25 +94,11 @@ final class CBZBookRenderer: BookRenderer {
     }
 
     func goForward() async throws -> Bool {
-        guard let currentLocator,
-              let publication,
-              currentLocator.spineIndex + 1 < publication.pages.count else {
-            return false
-        }
-
-        try await go(to: pageLocator(for: currentLocator.spineIndex + 1, in: publication))
-        return true
+        try await navigate(by: readingDirection == .leftToRight ? 1 : -1)
     }
 
     func goBackward() async throws -> Bool {
-        guard let currentLocator,
-              let publication,
-              currentLocator.spineIndex > 0 else {
-            return false
-        }
-
-        try await go(to: pageLocator(for: currentLocator.spineIndex - 1, in: publication))
-        return true
+        try await navigate(by: readingDirection == .leftToRight ? -1 : 1)
     }
 
     func go(to locator: BookLocator) async throws {
@@ -129,6 +116,19 @@ final class CBZBookRenderer: BookRenderer {
         }
         try pageView.displayImage(at: page.fileURL)
         currentLocator = try pageLocator(for: locator.spineIndex, in: publication)
+    }
+
+    private func navigate(by offset: Int) async throws -> Bool {
+        guard let currentLocator,
+              let publication else {
+            return false
+        }
+        let destinationIndex = currentLocator.spineIndex + offset
+        guard publication.pages.indices.contains(destinationIndex) else {
+            return false
+        }
+        try await go(to: pageLocator(for: destinationIndex, in: publication))
+        return true
     }
 
     private func pageLocator(for pageIndex: Int, in publication: CbzPublication) throws -> BookLocator {

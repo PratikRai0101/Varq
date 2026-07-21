@@ -25,6 +25,21 @@ struct CBZBookRendererTests {
         #expect(renderer.currentLocator?.spineIndex == 0)
     }
 
+    @Test func reversesNavigationForRightToLeftComics() async throws {
+        let pageView = FakeCBZPageView()
+        let renderer = CBZBookRenderer(pageView: pageView)
+        let finalPage = try BookLocator(format: .cbz, spineIndex: 1, resourceHref: "002.png", progression: 0)
+        try await renderer.open(bookURL: fixtureURL, at: finalPage)
+
+        try await renderer.updateReadingAppearance(ReadingAppearance(comicReadingDirection: .rightToLeft))
+
+        #expect(try await renderer.goForward())
+        #expect(renderer.currentLocator?.spineIndex == 0)
+        #expect(!(try await renderer.goForward()))
+        #expect(try await renderer.goBackward())
+        #expect(renderer.currentLocator?.spineIndex == 1)
+    }
+
     @Test func restoresAPageFromItsCbzLocator() async throws {
         let pageView = FakeCBZPageView()
         let renderer = CBZBookRenderer(pageView: pageView)

@@ -65,6 +65,17 @@ struct ReaderView: View {
         }
         .onDisappear { Task { await viewModel.close() } }
         .toolbar {
+            if viewModel.supportsComicControls {
+                ToolbarItem {
+                    ComicReadingControls(
+                        readingDirection: viewModel.readingAppearance.comicReadingDirection,
+                        setReadingDirection: { readingDirection in
+                            Task { await viewModel.setComicReadingDirection(readingDirection) }
+                        }
+                    )
+                }
+            }
+
             ToolbarItem {
                 ReaderAppearanceControls(
                     appearance: viewModel.readingAppearance,
