@@ -101,14 +101,14 @@ final class ReaderViewModel {
         await updateReadingAppearance(appearance)
     }
 
-    func createHighlight(color: HighlightColorTag) async {
+    func createHighlight(color: HighlightColorTag) async -> Highlight? {
         guard let selectionRenderer = renderer as? any TextSelectionProviding else {
-            return
+            return nil
         }
         do {
             guard let anchor = try await selectionRenderer.selectedTextHighlightAnchor(),
                   let modelContext else {
-                return
+                return nil
             }
             let highlight = Highlight(
                 locatorData: try JSONEncoder().encode(anchor),
@@ -117,6 +117,22 @@ final class ReaderViewModel {
                 book: book
             )
             modelContext.insert(highlight)
+            try modelContext.save()
+            errorMessage = nil
+            return highlight
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    func updateNote(_ note: String, for highlight: Highlight) {
+        guard let modelContext else {
+            return
+        }
+        do {
+            let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+            highlight.note = trimmedNote.isEmpty ? nil : note
             try modelContext.save()
             errorMessage = nil
         } catch {

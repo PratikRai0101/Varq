@@ -10,6 +10,8 @@ enum VarqLayout {
     static let coverGridMinimumWidth: CGFloat = 152
     static let pageTurnSwipeDistance: CGFloat = 48
     static let pageTurnShadowRadius: CGFloat = 16
+    static let noteEditorMinimumWidth: CGFloat = 360
+    static let noteEditorMinimumHeight: CGFloat = 260
 }
 
 enum VarqMotion {

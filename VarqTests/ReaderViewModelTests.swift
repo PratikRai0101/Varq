@@ -76,12 +76,16 @@ struct ReaderViewModelTests {
         let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
         viewModel.configurePersistence(using: context)
 
-        await viewModel.createHighlight(color: .saffron)
+        let createdHighlight = await viewModel.createHighlight(color: .saffron)
 
-        let highlight = try #require(book.highlights.first)
+        let highlight = try #require(createdHighlight)
+        #expect(book.highlights.first === highlight)
         #expect(highlight.selectedText == "selected")
         #expect(highlight.colorTag == HighlightColorTag.saffron.rawValue)
         #expect(try JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData) == anchor)
+
+        viewModel.updateNote("A useful passage", for: highlight)
+        #expect(highlight.note == "A useful passage")
     }
 
     @Test func restoresAndClearsThePersistedLocatorWhenClosing() async throws {

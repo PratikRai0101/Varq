@@ -11,6 +11,7 @@ struct ReaderView: View {
     @State private var pageTurnProgress: CGFloat = 0
     @State private var readerOpacity = 1.0
     @State private var isTurningPage = false
+    @State private var highlightForNote: Highlight?
 
     init(book: Book, bookURL: URL, renderer: some BookRenderer) {
         _viewModel = State(initialValue: ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer))
@@ -68,7 +69,7 @@ struct ReaderView: View {
             if viewModel.supportsTextHighlights {
                 ToolbarItem {
                     HighlightCreationControls { color in
-                        Task { await viewModel.createHighlight(color: color) }
+                        Task { highlightForNote = await viewModel.createHighlight(color: color) }
                     }
                 }
             }
@@ -115,6 +116,11 @@ struct ReaderView: View {
 
             ToolbarItem(placement: .primaryAction) {
                 Button("Close reader", systemImage: "xmark", action: dismiss.callAsFunction)
+            }
+        }
+        .sheet(item: $highlightForNote) { highlight in
+            HighlightNoteEditor(highlight: highlight) { note in
+                viewModel.updateNote(note, for: highlight)
             }
         }
     }
