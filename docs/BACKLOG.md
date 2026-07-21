@@ -59,7 +59,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [ ] Unit tests for export format correctness
 
 ## Phase 8 — Private shelf (Touch ID)
-- [ ] `BiometricGateService`: LocalAuthentication wrapper
+- [x] `BiometricGateService`: LocalAuthentication wrapper
 - [ ] Mark-as-private UI flow
 - [ ] CryptoKit encryption at rest + Keychain-stored key with biometric access control
 - [ ] Session-based unlock behavior
