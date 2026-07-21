@@ -6,6 +6,7 @@ struct LibraryView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var libraryViewModel = LibraryViewModel()
     @State private var isDropTargeted = false
+    @State private var privateBookViewModel = PrivateBookViewModel()
 
     let importViewModel: ImportViewModel
     let managedLibraryDirectory: URL
@@ -74,6 +75,7 @@ struct LibraryView: View {
                 BookCoverCard(book: book)
             }
             .buttonStyle(.plain)
+            .contextMenu { privateBookMenu(for: book) }
         case .pdf:
             NavigationLink {
                 ReaderView(book: book, bookURL: bookURL(for: book), renderer: PDFBookRenderer())
@@ -81,6 +83,7 @@ struct LibraryView: View {
                 BookCoverCard(book: book)
             }
             .buttonStyle(.plain)
+            .contextMenu { privateBookMenu(for: book) }
         case .cbz:
             NavigationLink {
                 ReaderView(book: book, bookURL: bookURL(for: book), renderer: CBZBookRenderer())
@@ -88,9 +91,23 @@ struct LibraryView: View {
                 BookCoverCard(book: book)
             }
             .buttonStyle(.plain)
+            .contextMenu { privateBookMenu(for: book) }
         case .cbr:
             BookCoverCard(book: book)
                 .accessibilityHint("CBR reading support is planned for a future release.")
+        }
+    }
+
+    @ViewBuilder
+    private func privateBookMenu(for book: Book) -> some View {
+        if !book.isPrivate {
+            Button("Mark as private", systemImage: "lock") {
+                privateBookViewModel.markPrivate(
+                    book: book,
+                    managedFileURL: bookURL(for: book),
+                    using: modelContext
+                )
+            }
         }
     }
 

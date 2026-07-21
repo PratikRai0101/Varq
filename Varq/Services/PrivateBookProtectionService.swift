@@ -1,7 +1,12 @@
 import CryptoKit
 import Foundation
 
-struct PrivateBookProtectionService {
+protocol PrivateBookProtecting: AnyObject {
+    func protect(bookID: UUID, managedFileURL: URL) throws -> PrivateBookProtectionHandle
+    func rollbackProtection(_ handle: PrivateBookProtectionHandle, bookID: UUID, managedFileURL: URL) throws
+}
+
+final class PrivateBookProtectionService: PrivateBookProtecting {
     private let cryptoService: PrivateBookCryptoService
     private let keyStore: any PrivateBookKeyStoring
 
@@ -33,4 +38,8 @@ struct PrivateBookProtectionService {
 
 struct PrivateBookProtectionHandle {
     fileprivate let key: SymmetricKey
+
+    init(key: SymmetricKey) {
+        self.key = key
+    }
 }
