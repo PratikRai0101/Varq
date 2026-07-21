@@ -32,7 +32,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 
 ## Phase 4 — Library view
 - [x] `LibraryViewModel`: fetch/sort/filter books
-- [ ] `LibraryView`: responsive grid, cover art, title/author labels
+- [x] `LibraryView`: responsive grid, cover art, title/author labels
 - [ ] Empty state (no books imported yet) matching design system voice/tone
 - [ ] Sort controls (title, author, date added, recently read)
 

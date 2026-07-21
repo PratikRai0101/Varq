@@ -22,8 +22,15 @@ struct LibraryView: View {
                             .tint(.varqTerracotta)
                     }
                 } else {
-                    List(libraryViewModel.books) { book in
-                        Text(book.title)
+                    ScrollView {
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: VarqLayout.coverGridMinimumWidth), spacing: VarqSpacing.regular)],
+                            spacing: VarqSpacing.large
+                        ) {
+                            ForEach(libraryViewModel.books) { book in
+                                BookCoverCard(book: book)
+                            }
+                        }
                     }
                 }
             }

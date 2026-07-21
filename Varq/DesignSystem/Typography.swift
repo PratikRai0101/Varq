@@ -1,7 +1,13 @@
 import SwiftUI
 
 enum VarqSpacing {
+    static let compact: CGFloat = 8
+    static let regular: CGFloat = 16
     static let large: CGFloat = 24
+}
+
+enum VarqLayout {
+    static let coverGridMinimumWidth: CGFloat = 152
 }
 
 enum VarqTypography {
