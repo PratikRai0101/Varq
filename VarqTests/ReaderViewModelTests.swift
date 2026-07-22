@@ -233,6 +233,45 @@ struct ReaderViewModelTests {
         #expect(renderer.renderedHighlightIDs.last == [])
     }
 
+    @Test func removesAnOverlappingHighlightFromTheContextAction() async throws {
+        let savedLocator = try epubLocator(progression: 0.1)
+        let selectedLocator = try epubLocator(progression: 0.8)
+        let savedAnchor = try TextHighlightAnchor(
+            locator: savedLocator,
+            startOffset: 3,
+            endOffset: 11,
+            quote: TextQuoteSelector(exact: "selected")
+        )
+        let selectedAnchor = try TextHighlightAnchor(
+            locator: selectedLocator,
+            startOffset: 5,
+            endOffset: 9,
+            quote: TextQuoteSelector(exact: "lect")
+        )
+        let context = try modelContext()
+        let book = book()
+        let highlight = Highlight(
+            locatorData: try JSONEncoder().encode(savedAnchor),
+            selectedText: savedAnchor.quote.exact,
+            colorTag: HighlightColorTag.highlightGreen.rawValue,
+            book: book
+        )
+        context.insert(book)
+        context.insert(highlight)
+        try context.save()
+        let renderer = FakeBookRenderer(locator: selectedLocator)
+        let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
+        viewModel.configurePersistence(using: context)
+
+        renderer.sendAnnotationAction(.removeHighlight(anchor: selectedAnchor))
+        for _ in 0..<10 where !book.highlights.isEmpty {
+            await Task.yield()
+        }
+
+        #expect(book.highlights.isEmpty)
+        #expect(renderer.renderedHighlightIDs.last == [])
+    }
+
     @Test func rendersPersistedHighlightsThroughTheRendererInterface() async throws {
         let locator = try epubLocator(progression: 0)
         let anchor = try TextHighlightAnchor(

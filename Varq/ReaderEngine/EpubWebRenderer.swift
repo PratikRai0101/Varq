@@ -145,6 +145,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Rea
         ReaderAnnotationContextMenu.items(
             target: self,
             highlightAction: #selector(createHighlightFromContextMenu(_:)),
+            removeHighlightAction: #selector(removeHighlightFromContextMenu(_:)),
             noteAction: #selector(createNoteFromContextMenu(_:)),
             pageNoteAction: #selector(createPageNoteFromContextMenu(_:))
         )
@@ -164,6 +165,22 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Rea
                     return
                 }
                 self.annotationActionHandler?(.createHighlight(anchor: anchor, color: color))
+            } catch {
+                return
+            }
+        }
+    }
+
+    @objc private func removeHighlightFromContextMenu(_ sender: NSMenuItem) {
+        Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+            do {
+                guard let anchor = try await self.selectedTextHighlightAnchor() else {
+                    return
+                }
+                self.annotationActionHandler?(.removeHighlight(anchor: anchor))
             } catch {
                 return
             }

@@ -308,11 +308,46 @@ final class ReaderViewModel {
                 }
                 _ = await self.createHighlight(anchor: anchor, color: color)
             }
+        case let .removeHighlight(anchor):
+            Task { @MainActor [weak self] in
+                await self?.removeHighlight(matching: anchor)
+            }
         case let .createNote(anchor):
             noteEditorState = NoteEditorState(anchor: ReadingNoteAnchor(textSelection: anchor))
         case let .createPageNote(locator):
             noteEditorState = NoteEditorState(anchor: ReadingNoteAnchor(pageLocator: locator))
         }
+    }
+
+    private func removeHighlight(matching selection: TextHighlightAnchor) async {
+        for highlight in book.highlights {
+            guard let anchor = try? JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData),
+                  anchorsOverlap(anchor, selection) else {
+                continue
+            }
+            _ = await deleteHighlight(highlight)
+            return
+        }
+    }
+
+    private func anchorsOverlap(_ first: TextHighlightAnchor, _ second: TextHighlightAnchor) -> Bool {
+        guard first.locator.format == second.locator.format,
+              first.locator.spineIndex == second.locator.spineIndex,
+              first.locator.resourceHref == second.locator.resourceHref else {
+            return false
+        }
+        if first == second {
+            return true
+        }
+        guard first.precision == .exactTextRange,
+              second.precision == .exactTextRange,
+              let firstStart = first.startOffset,
+              let firstEnd = first.endOffset,
+              let secondStart = second.startOffset,
+              let secondEnd = second.endOffset else {
+            return false
+        }
+        return firstStart < secondEnd && secondStart < firstEnd
     }
 
     private func openNote(id: UUID) {

@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 enum ReaderAnnotationAction {
     case createHighlight(anchor: TextHighlightAnchor, color: HighlightColorTag)
+    case removeHighlight(anchor: TextHighlightAnchor)
     case createNote(anchor: TextHighlightAnchor)
     case createPageNote(locator: BookLocator)
 }
@@ -19,6 +20,7 @@ enum ReaderAnnotationContextMenu {
     static func items(
         target: AnyObject,
         highlightAction: Selector,
+        removeHighlightAction: Selector,
         noteAction: Selector,
         pageNoteAction: Selector
     ) -> [NSMenuItem] {
@@ -37,11 +39,18 @@ enum ReaderAnnotationContextMenu {
         let highlightItem = NSMenuItem(title: "Highlight", action: nil, keyEquivalent: "")
         highlightItem.submenu = highlightMenu
 
+        let removeHighlightItem = NSMenuItem(
+            title: "Remove highlight",
+            action: removeHighlightAction,
+            keyEquivalent: ""
+        )
+        removeHighlightItem.target = target
+
         let noteItem = NSMenuItem(title: "Add note…", action: noteAction, keyEquivalent: "")
         noteItem.target = target
 
         let pageNoteItem = NSMenuItem(title: "Add page note…", action: pageNoteAction, keyEquivalent: "")
         pageNoteItem.target = target
-        return [highlightItem, noteItem, pageNoteItem]
+        return [highlightItem, removeHighlightItem, noteItem, pageNoteItem]
     }
 }

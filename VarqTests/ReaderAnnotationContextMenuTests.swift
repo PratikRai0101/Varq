@@ -10,11 +10,12 @@ struct ReaderAnnotationContextMenuTests {
         let items = ReaderAnnotationContextMenu.items(
             target: target,
             highlightAction: #selector(ContextMenuTarget.highlight(_:)),
+            removeHighlightAction: #selector(ContextMenuTarget.removeHighlight(_:)),
             noteAction: #selector(ContextMenuTarget.note(_:)),
             pageNoteAction: #selector(ContextMenuTarget.pageNote(_:))
         )
 
-        #expect(items.map(\.title) == ["Highlight", "Add note…", "Add page note…"])
+        #expect(items.map(\.title) == ["Highlight", "Remove highlight", "Add note…", "Add page note…"])
         #expect(items.first?.submenu?.items.map(\.title) == [
             "Saffron", "Terracotta", "Maroon", "Neon green", "Neon yellow", "Neon red", "Neon pink"
         ])
@@ -45,6 +46,7 @@ struct ReaderAnnotationContextMenuTests {
 @MainActor
 private final class ContextMenuTarget: NSObject {
     @objc func highlight(_ sender: NSMenuItem) { }
+    @objc func removeHighlight(_ sender: NSMenuItem) { }
     @objc func note(_ sender: NSMenuItem) { }
     @objc func pageNote(_ sender: NSMenuItem) { }
 }
