@@ -147,7 +147,9 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Rea
             highlightAction: #selector(createHighlightFromContextMenu(_:)),
             removeHighlightAction: #selector(removeHighlightFromContextMenu(_:)),
             noteAction: #selector(createNoteFromContextMenu(_:)),
-            pageNoteAction: #selector(createPageNoteFromContextMenu(_:))
+            removeNoteAction: #selector(removeNoteFromContextMenu(_:)),
+            pageNoteAction: #selector(createPageNoteFromContextMenu(_:)),
+            removePageNoteAction: #selector(removePageNoteFromContextMenu(_:))
         )
     }
 
@@ -203,11 +205,34 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Rea
         }
     }
 
+    @objc private func removeNoteFromContextMenu(_ sender: NSMenuItem) {
+        Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+            do {
+                guard let anchor = try await self.selectedTextHighlightAnchor() else {
+                    return
+                }
+                self.annotationActionHandler?(.removeNote(anchor: anchor))
+            } catch {
+                return
+            }
+        }
+    }
+
     @objc private func createPageNoteFromContextMenu(_ sender: NSMenuItem) {
         guard let currentLocator else {
             return
         }
         annotationActionHandler?(.createPageNote(locator: currentLocator))
+    }
+
+    @objc private func removePageNoteFromContextMenu(_ sender: NSMenuItem) {
+        guard let currentLocator else {
+            return
+        }
+        annotationActionHandler?(.removePageNote(locator: currentLocator))
     }
 
     func renderHighlights(_ highlights: [Highlight]) async {

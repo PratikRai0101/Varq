@@ -314,8 +314,40 @@ final class ReaderViewModel {
             }
         case let .createNote(anchor):
             noteEditorState = NoteEditorState(anchor: ReadingNoteAnchor(textSelection: anchor))
+        case let .removeNote(anchor):
+            Task { @MainActor [weak self] in
+                await self?.removeNote(matching: anchor)
+            }
         case let .createPageNote(locator):
             noteEditorState = NoteEditorState(anchor: ReadingNoteAnchor(pageLocator: locator))
+        case let .removePageNote(locator):
+            Task { @MainActor [weak self] in
+                await self?.removePageNote(at: locator)
+            }
+        }
+    }
+
+    private func removeNote(matching selection: TextHighlightAnchor) async {
+        for note in book.notes {
+            guard let noteAnchor = try? JSONDecoder().decode(ReadingNoteAnchor.self, from: note.anchorData),
+                  let textSelection = noteAnchor.textSelection,
+                  anchorsOverlap(textSelection, selection) else {
+                continue
+            }
+            await deleteNote(note)
+            return
+        }
+    }
+
+    private func removePageNote(at locator: BookLocator) async {
+        for note in book.notes {
+            guard let noteAnchor = try? JSONDecoder().decode(ReadingNoteAnchor.self, from: note.anchorData),
+                  noteAnchor.kind == .pageLocation,
+                  sameReaderLocation(noteAnchor.locator, locator) else {
+                continue
+            }
+            await deleteNote(note)
+            return
         }
     }
 
@@ -331,9 +363,7 @@ final class ReaderViewModel {
     }
 
     private func anchorsOverlap(_ first: TextHighlightAnchor, _ second: TextHighlightAnchor) -> Bool {
-        guard first.locator.format == second.locator.format,
-              first.locator.spineIndex == second.locator.spineIndex,
-              first.locator.resourceHref == second.locator.resourceHref else {
+        guard sameResource(first.locator, second.locator) else {
             return false
         }
         if first == second {
@@ -348,6 +378,16 @@ final class ReaderViewModel {
             return false
         }
         return firstStart < secondEnd && secondStart < firstEnd
+    }
+
+    private func sameReaderLocation(_ first: BookLocator, _ second: BookLocator) -> Bool {
+        sameResource(first, second) && abs(first.progression - second.progression) < 0.03
+    }
+
+    private func sameResource(_ first: BookLocator, _ second: BookLocator) -> Bool {
+        first.format == second.format &&
+            first.spineIndex == second.spineIndex &&
+            first.resourceHref == second.resourceHref
     }
 
     private func openNote(id: UUID) {

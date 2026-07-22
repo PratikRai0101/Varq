@@ -6,7 +6,9 @@ enum ReaderAnnotationAction {
     case createHighlight(anchor: TextHighlightAnchor, color: HighlightColorTag)
     case removeHighlight(anchor: TextHighlightAnchor)
     case createNote(anchor: TextHighlightAnchor)
+    case removeNote(anchor: TextHighlightAnchor)
     case createPageNote(locator: BookLocator)
+    case removePageNote(locator: BookLocator)
 }
 
 @MainActor
@@ -22,7 +24,9 @@ enum ReaderAnnotationContextMenu {
         highlightAction: Selector,
         removeHighlightAction: Selector,
         noteAction: Selector,
-        pageNoteAction: Selector
+        removeNoteAction: Selector,
+        pageNoteAction: Selector,
+        removePageNoteAction: Selector
     ) -> [NSMenuItem] {
         let highlightMenu = NSMenu()
         for color in HighlightColorTag.allCases {
@@ -49,8 +53,25 @@ enum ReaderAnnotationContextMenu {
         let noteItem = NSMenuItem(title: "Add note…", action: noteAction, keyEquivalent: "")
         noteItem.target = target
 
+        let removeNoteItem = NSMenuItem(title: "Remove note", action: removeNoteAction, keyEquivalent: "")
+        removeNoteItem.target = target
+
         let pageNoteItem = NSMenuItem(title: "Add page note…", action: pageNoteAction, keyEquivalent: "")
         pageNoteItem.target = target
-        return [highlightItem, removeHighlightItem, noteItem, pageNoteItem]
+
+        let removePageNoteItem = NSMenuItem(
+            title: "Remove page note",
+            action: removePageNoteAction,
+            keyEquivalent: ""
+        )
+        removePageNoteItem.target = target
+        return [
+            highlightItem,
+            removeHighlightItem,
+            noteItem,
+            removeNoteItem,
+            pageNoteItem,
+            removePageNoteItem
+        ]
     }
 }
