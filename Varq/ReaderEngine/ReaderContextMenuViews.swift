@@ -4,10 +4,57 @@ import WebKit
 
 @MainActor
 final class ReaderWebView: WKWebView {
+    private static let contextMenuMessageName = "varqReaderContextMenu"
+
     var varqContextMenuItemsProvider: (() -> [NSMenuItem])?
+    var varqContextMenuRequestHandler: ((CGPoint) -> Void)?
+    private var contextMenuMessageHandler: WebContextMenuMessageHandler?
+
+    convenience init(frame frameRect: NSRect) {
+        self.init(frame: frameRect, configuration: WKWebViewConfiguration())
+    }
+
+    override init(frame frameRect: NSRect, configuration: WKWebViewConfiguration) {
+        super.init(frame: frameRect, configuration: configuration)
+        installContextMenuBridge()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        installContextMenuBridge()
+    }
 
     override func menu(for event: NSEvent) -> NSMenu? {
         addVarqItems(to: super.menu(for: event))
+    }
+
+    private func installContextMenuBridge() {
+        let script = WKUserScript(
+            source: """
+            (() => {
+                document.addEventListener('contextmenu', event => {
+                    const selection = window.getSelection();
+                    if (!selection || selection.isCollapsed) return;
+                    event.preventDefault();
+                    window.webkit.messageHandlers.varqReaderContextMenu.postMessage({
+                        x: event.clientX,
+                        y: event.clientY
+                    });
+                });
+            })();
+            """,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        )
+        let messageHandler = WebContextMenuMessageHandler()
+        messageHandler.webView = self
+        contextMenuMessageHandler = messageHandler
+        configuration.userContentController.addUserScript(script)
+        configuration.userContentController.add(messageHandler, name: Self.contextMenuMessageName)
+    }
+
+    fileprivate func deliverContextMenuRequest(at point: CGPoint) {
+        varqContextMenuRequestHandler?(point)
     }
 
     private func addVarqItems(to defaultMenu: NSMenu?) -> NSMenu? {
@@ -24,6 +71,21 @@ final class ReaderWebView: WKWebView {
             menu.insertItem(item, at: 0)
         }
         return menu
+    }
+}
+
+private final class WebContextMenuMessageHandler: NSObject, WKScriptMessageHandler {
+    weak var webView: ReaderWebView?
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard let body = message.body as? [String: Any],
+              let x = body["x"] as? Double,
+              let y = body["y"] as? Double else {
+            return
+        }
+        Task { @MainActor [weak webView] in
+            webView?.deliverContextMenuRequest(at: CGPoint(x: x, y: y))
+        }
     }
 }
 

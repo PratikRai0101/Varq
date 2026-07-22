@@ -26,7 +26,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Rea
     }
 
     override init() {
-        webView = ReaderWebView()
+        webView = ReaderWebView(frame: .zero)
         publicationService = EpubPublicationService()
         sessionRootDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("Varq", isDirectory: true)
@@ -139,6 +139,22 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Rea
         webView.varqContextMenuItemsProvider = { [weak self] in
             self?.annotationContextMenuItems() ?? []
         }
+        webView.varqContextMenuRequestHandler = { [weak self] point in
+            self?.showAnnotationContextMenu(at: point)
+        }
+    }
+
+    private func showAnnotationContextMenu(at webPoint: CGPoint) {
+        let items = annotationContextMenuItems()
+        guard !items.isEmpty else {
+            return
+        }
+        let menu = NSMenu()
+        for item in items {
+            menu.addItem(item)
+        }
+        let point = NSPoint(x: webPoint.x, y: max(0, webView.bounds.height - webPoint.y))
+        menu.popUp(positioning: nil, at: point, in: webView)
     }
 
     private func annotationContextMenuItems() -> [NSMenuItem] {
