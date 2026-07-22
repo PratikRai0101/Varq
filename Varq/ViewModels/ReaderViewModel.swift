@@ -191,6 +191,39 @@ final class ReaderViewModel {
         noteEditorState = nil
     }
 
+    func deleteNote(_ note: ReadingNote) async {
+        guard let modelContext else {
+            return
+        }
+        let remainingNotes = book.notes.filter { $0.id != note.id }
+        do {
+            modelContext.delete(note)
+            try modelContext.save()
+            noteEditorState = nil
+            await renderer.renderNotes(remainingNotes)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func deleteHighlight(_ highlight: Highlight) async -> Bool {
+        guard let modelContext else {
+            return false
+        }
+        let remainingHighlights = book.highlights.filter { $0.id != highlight.id }
+        do {
+            modelContext.delete(highlight)
+            try modelContext.save()
+            await renderer.renderHighlights(remainingHighlights)
+            errorMessage = nil
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
     func navigateToHighlight(_ highlight: Highlight) async {
         do {
             let anchor = try JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData)

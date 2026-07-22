@@ -3,6 +3,7 @@ import SwiftUI
 struct HighlightsListView: View {
     let book: Book
     var navigateToHighlight: ((Highlight) -> Void)?
+    var deleteHighlight: ((Highlight) async -> Bool)?
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = HighlightsViewModel()
@@ -39,6 +40,17 @@ struct HighlightsListView: View {
                         .padding(.vertical, VarqSpacing.compact)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button("Remove highlight", role: .destructive) {
+                            Task {
+                                guard let deleteHighlight,
+                                      await deleteHighlight(highlight) else {
+                                    return
+                                }
+                                viewModel.remove(highlight)
+                            }
+                        }
+                    }
                 }
                 .scrollContentBackground(.hidden)
             }

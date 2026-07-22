@@ -14,5 +14,9 @@ struct HighlightsViewModelTests {
         viewModel.load(for: book)
 
         #expect(viewModel.highlights.map(\.selectedText) == [newer.selectedText, older.selectedText])
+
+        viewModel.remove(newer)
+
+        #expect(viewModel.highlights.map(\.selectedText) == [older.selectedText])
     }
 }

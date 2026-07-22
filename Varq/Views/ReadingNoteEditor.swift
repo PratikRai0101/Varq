@@ -3,6 +3,7 @@ import SwiftUI
 struct ReadingNoteEditor: View {
     let state: NoteEditorState
     let saveNote: (String, HighlightColorTag) -> Void
+    let deleteNote: (ReadingNote) -> Void
     let cancel: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -12,10 +13,12 @@ struct ReadingNoteEditor: View {
     init(
         state: NoteEditorState,
         saveNote: @escaping (String, HighlightColorTag) -> Void,
+        deleteNote: @escaping (ReadingNote) -> Void,
         cancel: @escaping () -> Void
     ) {
         self.state = state
         self.saveNote = saveNote
+        self.deleteNote = deleteNote
         self.cancel = cancel
         _noteText = State(initialValue: state.initialBody)
         _color = State(initialValue: state.initialColor)
@@ -58,6 +61,11 @@ struct ReadingNoteEditor: View {
                 .background(colorScheme == .dark ? Color.varqIndigoLight : Color.varqParchmentDeep)
 
             HStack {
+                if let note = state.existingNote {
+                    Button("Delete note", role: .destructive) {
+                        deleteNote(note)
+                    }
+                }
                 Button("Cancel", role: .cancel, action: cancel)
                 Spacer()
                 Button("Save") {

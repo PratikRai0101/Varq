@@ -77,9 +77,15 @@ struct ReaderView: View {
             if viewModel.supportsTextHighlights {
                 ToolbarItem {
                     NavigationLink {
-                        HighlightsListView(book: viewModel.highlightedBook) { highlight in
-                            Task { await viewModel.navigateToHighlight(highlight) }
-                        }
+                        HighlightsListView(
+                            book: viewModel.highlightedBook,
+                            navigateToHighlight: { highlight in
+                                Task { await viewModel.navigateToHighlight(highlight) }
+                            },
+                            deleteHighlight: { highlight in
+                                await viewModel.deleteHighlight(highlight)
+                            }
+                        )
                     } label: {
                         Label("Highlights", systemImage: "list.bullet")
                     }
@@ -167,6 +173,9 @@ struct ReaderView: View {
                 state: state,
                 saveNote: { body, color in
                     Task { await viewModel.saveNote(body: body, color: color) }
+                },
+                deleteNote: { note in
+                    Task { await viewModel.deleteNote(note) }
                 },
                 cancel: viewModel.cancelNoteEditing
             )

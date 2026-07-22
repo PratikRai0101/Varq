@@ -181,6 +181,58 @@ struct ReaderViewModelTests {
         #expect(state.initialColor == .terracotta)
     }
 
+    @Test func deletesANoteAndRemovesItsMarker() async throws {
+        let locator = try epubLocator(progression: 0)
+        let context = try modelContext()
+        let book = book()
+        let note = ReadingNote(
+            anchorData: try JSONEncoder().encode(ReadingNoteAnchor(pageLocator: locator)),
+            body: "A note to remove",
+            colorTag: HighlightColorTag.maroon.rawValue,
+            book: book
+        )
+        context.insert(book)
+        context.insert(note)
+        try context.save()
+        let renderer = FakeBookRenderer(locator: locator)
+        let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
+        viewModel.configurePersistence(using: context)
+
+        await viewModel.deleteNote(note)
+
+        #expect(book.notes.isEmpty)
+        #expect(renderer.renderedNoteIDs.last == [])
+    }
+
+    @Test func deletesAHighlightAndRemovesItsRendering() async throws {
+        let locator = try epubLocator(progression: 0)
+        let anchor = try TextHighlightAnchor(
+            locator: locator,
+            startOffset: 3,
+            endOffset: 11,
+            quote: TextQuoteSelector(exact: "selected")
+        )
+        let context = try modelContext()
+        let book = book()
+        let highlight = Highlight(
+            locatorData: try JSONEncoder().encode(anchor),
+            selectedText: anchor.quote.exact,
+            colorTag: HighlightColorTag.highlightYellow.rawValue,
+            book: book
+        )
+        context.insert(book)
+        context.insert(highlight)
+        try context.save()
+        let renderer = FakeBookRenderer(locator: locator)
+        let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
+        viewModel.configurePersistence(using: context)
+
+        #expect(await viewModel.deleteHighlight(highlight))
+
+        #expect(book.highlights.isEmpty)
+        #expect(renderer.renderedHighlightIDs.last == [])
+    }
+
     @Test func rendersPersistedHighlightsThroughTheRendererInterface() async throws {
         let locator = try epubLocator(progression: 0)
         let anchor = try TextHighlightAnchor(
