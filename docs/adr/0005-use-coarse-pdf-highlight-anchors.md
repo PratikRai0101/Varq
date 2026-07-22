@@ -1,6 +1,6 @@
 # Use coarse PDF highlight anchors
 
-**Status:** Accepted
+**Status:** Superseded by ADR 0007
 
 ## Context
 

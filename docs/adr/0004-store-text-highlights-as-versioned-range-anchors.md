@@ -17,7 +17,7 @@ Store `TextHighlightAnchor` as the Codable value in `Highlight.locatorData`. It 
 
 The quote selector permits an adapter to verify offsets and, in a future content-migration feature, re-anchor a range when offsets no longer match. The initial schema supports EPUB and PDF only. CBZ has image pages rather than selectable text and is explicitly rejected.
 
-The WebKit EPUB adapter will derive offsets from the resource's `textContent`; the PDFKit adapter will derive offsets from the selected page string. Renderer-specific selection APIs remain behind the reader-engine boundary; Views and SwiftData never receive WebKit or PDFKit selection types.
+The WebKit EPUB adapter derives offsets from the resource's `textContent`. PDFKit geometry is persisted separately in the schema-3 `pdfSelectionGeometry` form defined by ADR 0007. Renderer-specific selection APIs remain behind the reader-engine boundary; Views and SwiftData never receive WebKit or PDFKit selection types.
 
 ## Consequences
 

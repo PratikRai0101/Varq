@@ -2,31 +2,33 @@ import Foundation
 import SwiftData
 
 @Model
-final class Highlight {
+final class ReadingNote {
     var id: UUID
-    var locatorData: Data
-    var selectedText: String
-    /// Legacy attachment retained for existing libraries; new personal notes are stored as `ReadingNote`.
-    var note: String?
+    var anchorData: Data
+    var selectedText: String?
+    var body: String
     var colorTag: String
     var dateCreated: Date
+    var dateModified: Date
     var book: Book?
 
     init(
         id: UUID = UUID(),
-        locatorData: Data,
-        selectedText: String,
-        note: String? = nil,
+        anchorData: Data,
+        selectedText: String? = nil,
+        body: String,
         colorTag: String,
         dateCreated: Date = .now,
+        dateModified: Date = .now,
         book: Book? = nil
     ) {
         self.id = id
-        self.locatorData = locatorData
+        self.anchorData = anchorData
         self.selectedText = selectedText
-        self.note = note
+        self.body = body
         self.colorTag = colorTag
         self.dateCreated = dateCreated
+        self.dateModified = dateModified
         self.book = book
     }
 }

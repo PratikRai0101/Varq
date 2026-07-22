@@ -11,6 +11,7 @@ struct LibraryModelPersistenceTests {
             for: Book.self,
             ReadingProgress.self,
             Highlight.self,
+            ReadingNote.self,
             configurations: configuration
         )
         let context = ModelContext(container)
@@ -33,10 +34,17 @@ struct LibraryModelPersistenceTests {
             colorTag: "saffron",
             book: book
         )
+        let note = ReadingNote(
+            anchorData: Data("chapter-1#page".utf8),
+            body: "A personal note",
+            colorTag: "highlightGreen",
+            book: book
+        )
 
         context.insert(book)
         context.insert(progress)
         context.insert(highlight)
+        context.insert(note)
         try context.save()
 
         let savedBooks = try context.fetch(FetchDescriptor<Book>())
@@ -50,5 +58,7 @@ struct LibraryModelPersistenceTests {
         #expect(savedBook.readingProgress?.percentComplete == 0.25)
         #expect(savedBook.highlights.count == 1)
         #expect(savedBook.highlights.first?.selectedText == "A selected passage")
+        #expect(savedBook.notes.count == 1)
+        #expect(savedBook.notes.first?.body == "A personal note")
     }
 }

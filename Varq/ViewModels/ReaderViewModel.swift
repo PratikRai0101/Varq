@@ -14,6 +14,7 @@ final class ReaderViewModel {
 
     private(set) var currentLocator: BookLocator?
     private(set) var readingAppearance = ReadingAppearance()
+    private(set) var noteEditorState: NoteEditorState?
     private(set) var errorMessage: String?
     var rendererView: NSView { renderer.view }
     var highlightedBook: Book { book }
@@ -31,6 +32,15 @@ final class ReaderViewModel {
         self.bookURL = bookURL
         self.renderer = renderer
         self.privateBookSessionService = privateBookSessionService
+
+        if let interactionRenderer = renderer as? any ReaderAnnotationInteractionProviding {
+            interactionRenderer.setAnnotationActionHandler { [weak self] action in
+                self?.handleAnnotationAction(action)
+            }
+            interactionRenderer.setNoteActivationHandler { [weak self] noteID in
+                self?.openNote(id: noteID)
+            }
+        }
     }
 
     func configurePersistence(using modelContext: ModelContext) {
@@ -45,6 +55,7 @@ final class ReaderViewModel {
             currentLocator = renderer.currentLocator
             persistCurrentLocator()
             await renderer.renderHighlights(book.highlights)
+            await renderer.renderNotes(book.notes)
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -124,10 +135,120 @@ final class ReaderViewModel {
             return nil
         }
         do {
-            guard let anchor = try await selectionRenderer.selectedTextHighlightAnchor(),
-                  let modelContext else {
+            guard let anchor = try await selectionRenderer.selectedTextHighlightAnchor() else {
                 return nil
             }
+            return await createHighlight(anchor: anchor, color: color)
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    func beginPageNote() {
+        guard let locator = renderer.currentLocator else {
+            return
+        }
+        noteEditorState = NoteEditorState(anchor: ReadingNoteAnchor(pageLocator: locator))
+    }
+
+    func saveNote(body: String, color: HighlightColorTag) async {
+        guard let noteEditorState,
+              let modelContext else {
+            return
+        }
+        let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedBody.isEmpty else {
+            errorMessage = "A note cannot be empty."
+            return
+        }
+
+        do {
+            if let note = noteEditorState.existingNote {
+                note.body = trimmedBody
+                note.colorTag = color.rawValue
+                note.dateModified = .now
+            } else {
+                let note = ReadingNote(
+                    anchorData: try JSONEncoder().encode(noteEditorState.anchor),
+                    selectedText: noteEditorState.selectedText,
+                    body: trimmedBody,
+                    colorTag: color.rawValue,
+                    book: book
+                )
+                modelContext.insert(note)
+            }
+            try modelContext.save()
+            self.noteEditorState = nil
+            await renderer.renderNotes(book.notes)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func cancelNoteEditing() {
+        noteEditorState = nil
+    }
+
+    func navigateToHighlight(_ highlight: Highlight) async {
+        do {
+            let anchor = try JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData)
+            try await renderer.navigate(to: anchor)
+            currentLocator = renderer.currentLocator
+            persistCurrentLocator()
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func close() async {
+        noteEditorState = nil
+        persistCurrentLocator()
+        await renderer.close()
+        privateBookSessionService.closeSession()
+        currentLocator = nil
+    }
+
+    private func updateReadingAppearance(_ appearance: ReadingAppearance) async {
+        do {
+            try await renderer.updateReadingAppearance(appearance)
+            readingAppearance = appearance
+            currentLocator = renderer.currentLocator
+            persistCurrentLocator()
+            await renderer.renderHighlights(book.highlights)
+            await renderer.renderNotes(book.notes)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func navigate(_ operation: () async throws -> Bool) async -> Bool {
+        do {
+            let didNavigate = try await operation()
+            currentLocator = renderer.currentLocator
+            if didNavigate {
+                persistCurrentLocator()
+                await renderer.renderNotes(book.notes)
+            }
+            errorMessage = nil
+            return didNavigate
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    private func createHighlight(
+        anchor: TextHighlightAnchor,
+        color: HighlightColorTag
+    ) async -> Highlight? {
+        guard let modelContext else {
+            return nil
+        }
+        do {
             let highlight = Highlight(
                 locatorData: try JSONEncoder().encode(anchor),
                 selectedText: anchor.quote.exact,
@@ -145,65 +266,28 @@ final class ReaderViewModel {
         }
     }
 
-    func navigateToHighlight(_ highlight: Highlight) async {
-        do {
-            let anchor = try JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData)
-            try await renderer.navigate(to: anchor)
-            currentLocator = renderer.currentLocator
-            persistCurrentLocator()
-            errorMessage = nil
-        } catch {
-            errorMessage = error.localizedDescription
+    private func handleAnnotationAction(_ action: ReaderAnnotationAction) {
+        switch action {
+        case let .createHighlight(anchor, color):
+            Task { @MainActor [weak self] in
+                guard let self else {
+                    return
+                }
+                _ = await self.createHighlight(anchor: anchor, color: color)
+            }
+        case let .createNote(anchor):
+            noteEditorState = NoteEditorState(anchor: ReadingNoteAnchor(textSelection: anchor))
+        case let .createPageNote(locator):
+            noteEditorState = NoteEditorState(anchor: ReadingNoteAnchor(pageLocator: locator))
         }
     }
 
-    func updateNote(_ note: String, for highlight: Highlight) {
-        guard let modelContext else {
+    private func openNote(id: UUID) {
+        guard let note = book.notes.first(where: { $0.id == id }),
+              let anchor = try? JSONDecoder().decode(ReadingNoteAnchor.self, from: note.anchorData) else {
             return
         }
-        do {
-            let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-            highlight.note = trimmedNote.isEmpty ? nil : note
-            try modelContext.save()
-            errorMessage = nil
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    func close() async {
-        persistCurrentLocator()
-        await renderer.close()
-        privateBookSessionService.closeSession()
-        currentLocator = nil
-    }
-
-    private func updateReadingAppearance(_ appearance: ReadingAppearance) async {
-        do {
-            try await renderer.updateReadingAppearance(appearance)
-            readingAppearance = appearance
-            currentLocator = renderer.currentLocator
-            persistCurrentLocator()
-            await renderer.renderHighlights(book.highlights)
-            errorMessage = nil
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    private func navigate(_ operation: () async throws -> Bool) async -> Bool {
-        do {
-            let didNavigate = try await operation()
-            currentLocator = renderer.currentLocator
-            if didNavigate {
-                persistCurrentLocator()
-            }
-            errorMessage = nil
-            return didNavigate
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
+        noteEditorState = NoteEditorState(note: note, anchor: anchor)
     }
 
     private func storedLocator() -> BookLocator? {

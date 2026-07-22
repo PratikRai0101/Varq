@@ -30,6 +30,29 @@ struct ExportServiceTests {
         #expect(exportedHighlights.first?["color"] as? String == "terracotta")
     }
 
+    @Test func exportsSeparateReadingNotes() throws {
+        let book = Book(title: "Book", author: "Author", libraryRelativePath: "fixture.epub", contentHash: "hash", format: .epub)
+        let locator = try BookLocator(format: .epub, spineIndex: 0, resourceHref: "chapter.xhtml", progression: 0)
+        let noteAnchor = ReadingNoteAnchor(pageLocator: locator)
+        let note = ReadingNote(
+            anchorData: try JSONEncoder().encode(noteAnchor),
+            body: "A personal page note",
+            colorTag: HighlightColorTag.highlightGreen.rawValue,
+            book: book
+        )
+
+        let markdown = ExportService().markdown(for: book, highlights: [])
+        let data = try ExportService().jsonData(for: book, highlights: [])
+        let object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let exportedNotes = try #require(object["notes"] as? [[String: Any]])
+
+        #expect(markdown.contains("## Note"))
+        #expect(markdown.contains("> Page note"))
+        #expect(markdown.contains("A personal page note"))
+        #expect(exportedNotes.first?["body"] as? String == "A personal page note")
+        #expect(exportedNotes.first?["color"] as? String == HighlightColorTag.highlightGreen.rawValue)
+    }
+
     @Test func escapesQuotesInYamlFrontmatter() throws {
         let book = Book(title: "The \"Secret\" History", author: "O'Brien, Jack", libraryRelativePath: "fixture.epub", contentHash: "hash", format: .epub)
         let markdown = ExportService().markdown(for: book, highlights: [])

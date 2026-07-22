@@ -25,6 +25,7 @@ final class Book {
     var isPrivate: Bool
     var readingProgress: ReadingProgress?
     var highlights: [Highlight]
+    var notes: [ReadingNote]
 }
 
 @Model
@@ -40,11 +41,22 @@ final class ReadingProgress {
 final class Highlight {
     var id: UUID
     var book: Book?
-    var locatorData: Data // Reading locator for the selection
+    var locatorData: Data // versioned TextHighlightAnchor for the selection
     var selectedText: String
-    var note: String?
     var colorTag: String // maps to a design-system highlight color
     var dateCreated: Date
+}
+
+@Model
+final class ReadingNote {
+    var id: UUID
+    var book: Book?
+    var anchorData: Data // versioned ReadingNoteAnchor for selected text or current location
+    var selectedText: String?
+    var body: String
+    var colorTag: String // maps to a design-system marker color
+    var dateCreated: Date
+    var dateModified: Date
 }
 ```
 
@@ -54,7 +66,7 @@ Book file handling must account for App Sandbox constraints — `ImportService` 
 
 - Keep each supported format behind a native macOS reader-engine component: PDFKit for PDFs, WebKit plus EPUB parsing for EPUBs, and archive image decoding for CBZ comics.
 - Follow `docs/adr/0003-use-css-columns-for-epub-pagination.md` for the `BookRenderer` interface and the versioned `BookLocator` schema. `ReaderViewModel` coordinates that interface; it must not expose WebKit or PDFKit types to SwiftData models or Views.
-- `BookLocator` is the canonical serialized representation of "where in the book" for `ReadingProgress`. `Highlight` stores the separate, versioned `TextHighlightAnchor` contract from `docs/adr/0004-store-text-highlights-as-versioned-range-anchors.md`, which contains a `BookLocator` plus a text range and quote selector. EPUB anchors are exact; PDF uses the explicitly coarse page-position fallback in `docs/adr/0005-use-coarse-pdf-highlight-anchors.md`.
+- `BookLocator` is the canonical serialized representation of "where in the book" for `ReadingProgress`. `Highlight` stores the separate, versioned `TextHighlightAnchor` contract from `docs/adr/0004-store-text-highlights-as-versioned-range-anchors.md`; EPUB anchors are exact and PDFs persist normalized selection geometry per `docs/adr/0007-store-normalized-pdf-selection-geometry.md`. `ReadingNote` stores the separate, versioned `ReadingNoteAnchor` contract from `docs/adr/0008-model-reading-notes-separately-from-highlights.md`.
 - Validate EPUB and CBZ navigation with small permissively licensed fixtures before building a custom `ReaderView`. CBR is deferred to v1.1+ under the decision recorded in `docs/PRD.md` section 8.
 
 ## Import pipeline
@@ -77,7 +89,7 @@ See `docs/adr/0006-encrypt-private-books-before-marking-them-private.md`: encryp
 
 ## Export pipeline
 
-- `ExportService` converts `Highlight` + associated `Book` metadata into: (a) a Markdown file with YAML frontmatter (Obsidian-compatible), (b) a flat JSON structure, on demand
+- `ExportService` converts `Highlight`, `ReadingNote`, and associated `Book` metadata into: (a) a Markdown file with YAML frontmatter (Obsidian-compatible), (b) a flat JSON structure, on demand
 - Keep the Markdown template itself as a separate, easily-editable string template — this will likely need iteration based on real Obsidian/Notion user feedback post-launch
 
 ## Testing strategy

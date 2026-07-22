@@ -22,10 +22,6 @@ struct HighlightCreationControls: View {
     }
 
     private func swatchColor(for color: HighlightColorTag) -> Color {
-        switch color {
-        case .saffron: Color.varqSaffron
-        case .terracotta: Color.varqTerracotta
-        case .maroon: Color.varqMaroon
-        }
+        color.varqColor
     }
 }

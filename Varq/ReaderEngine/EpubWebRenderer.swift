@@ -3,7 +3,7 @@ import Foundation
 import WebKit
 
 @MainActor
-final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKNavigationDelegate {
+final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, ReaderAnnotationInteractionProviding, WKNavigationDelegate {
     private let webView: WKWebView
     private let publicationService: EpubPublicationService
     private let sessionRootDirectory: URL
@@ -11,6 +11,9 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
     private var appearance = ReadingAppearance()
     private var navigationContinuation: CheckedContinuation<Void, Error>?
     private var storedHighlights: [Highlight] = []
+    private var storedNotes: [ReadingNote] = []
+    private var annotationActionHandler: ((ReaderAnnotationAction) -> Void)?
+    private var noteActivationHandler: ((UUID) -> Void)?
 
     private(set) var currentLocator: BookLocator?
     var view: NSView { webView }
@@ -23,13 +26,14 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
     }
 
     override init() {
-        webView = WKWebView()
+        webView = ReaderWebView()
         publicationService = EpubPublicationService()
         sessionRootDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("Varq", isDirectory: true)
             .appendingPathComponent("EPUBReader", isDirectory: true)
         super.init()
         webView.navigationDelegate = self
+        configureContextMenu()
     }
 
     init(
@@ -42,6 +46,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         self.sessionRootDirectory = sessionRootDirectory
         super.init()
         webView.navigationDelegate = self
+        configureContextMenu()
     }
 
     func open(bookURL: URL, at locator: BookLocator? = nil) async throws {
@@ -78,6 +83,14 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         try await applyPaginationStyle()
         let progression = try await setProgression(currentLocator.progression)
         try updateCurrentLocator(progression: progression)
+    }
+
+    func setAnnotationActionHandler(_ handler: @escaping (ReaderAnnotationAction) -> Void) {
+        annotationActionHandler = handler
+    }
+
+    func setNoteActivationHandler(_ handler: @escaping (UUID) -> Void) {
+        noteActivationHandler = handler
     }
 
     func selectedTextHighlightAnchor() async throws -> TextHighlightAnchor? {
@@ -119,6 +132,67 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         )
     }
 
+    private func configureContextMenu() {
+        guard let webView = webView as? ReaderWebView else {
+            return
+        }
+        webView.varqContextMenuItemsProvider = { [weak self] in
+            self?.annotationContextMenuItems() ?? []
+        }
+    }
+
+    private func annotationContextMenuItems() -> [NSMenuItem] {
+        ReaderAnnotationContextMenu.items(
+            target: self,
+            highlightAction: #selector(createHighlightFromContextMenu(_:)),
+            noteAction: #selector(createNoteFromContextMenu(_:)),
+            pageNoteAction: #selector(createPageNoteFromContextMenu(_:))
+        )
+    }
+
+    @objc private func createHighlightFromContextMenu(_ sender: NSMenuItem) {
+        guard let rawValue = sender.representedObject as? String,
+              let color = HighlightColorTag(rawValue: rawValue) else {
+            return
+        }
+        Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+            do {
+                guard let anchor = try await self.selectedTextHighlightAnchor() else {
+                    return
+                }
+                self.annotationActionHandler?(.createHighlight(anchor: anchor, color: color))
+            } catch {
+                return
+            }
+        }
+    }
+
+    @objc private func createNoteFromContextMenu(_ sender: NSMenuItem) {
+        Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+            do {
+                guard let anchor = try await self.selectedTextHighlightAnchor() else {
+                    return
+                }
+                self.annotationActionHandler?(.createNote(anchor: anchor))
+            } catch {
+                return
+            }
+        }
+    }
+
+    @objc private func createPageNoteFromContextMenu(_ sender: NSMenuItem) {
+        guard let currentLocator else {
+            return
+        }
+        annotationActionHandler?(.createPageNote(locator: currentLocator))
+    }
+
     func renderHighlights(_ highlights: [Highlight]) async {
         storedHighlights = highlights
         let anchors: [[String: Any]] = highlights.compactMap { highlight in
@@ -135,7 +209,9 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
                 "color": highlight.colorTag
             ]
         }
-        guard !anchors.isEmpty else { return }
+        let colorMap = HighlightColorTag.allCases.map {
+            "\($0.rawValue): '\($0.webHighlightColor)66'"
+        }.joined(separator: ",\n                ")
 
         let js = """
         (() => {
@@ -147,11 +223,8 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
             });
 
             const colorMap = {
-                saffron: 'rgba(230, 170, 90, 0.35)',
-                terracotta: 'rgba(181, 80, 42, 0.35)',
-                maroon: 'rgba(122, 46, 29, 0.35)'
+                \(colorMap)
             };
-
             const highlights = \(serializeAnchors(anchors));
 
             function createTextWalker() {
@@ -166,30 +239,161 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
                 return nodes;
             }
 
-            function findOffset(nodes, target) {
-                for (const n of nodes) {
-                    if (target >= n.start && target <= n.end) {
-                        return { node: n.node, offset: target - n.start };
-                    }
+            for (const highlight of highlights) {
+                const nodes = createTextWalker();
+                for (const info of nodes.reverse()) {
+                    const start = Math.max(highlight.start, info.start);
+                    const end = Math.min(highlight.end, info.end);
+                    if (start >= end) continue;
+                    try {
+                        const range = document.createRange();
+                        range.setStart(info.node, start - info.start);
+                        range.setEnd(info.node, end - info.start);
+                        const mark = document.createElement('mark');
+                        mark.className = 'varq-highlight';
+                        mark.style.background = colorMap[highlight.color] || colorMap.saffron;
+                        mark.style.color = 'inherit';
+                        range.surroundContents(mark);
+                    } catch (error) {}
                 }
-                return null;
+            }
+        })();
+        """
+        _ = try? await evaluate(script: js)
+    }
+
+    func renderNotes(_ notes: [ReadingNote]) async {
+        storedNotes = notes
+        guard let currentLocator else {
+            return
+        }
+
+        let markers = notes.compactMap { note -> WebNoteMarker? in
+            guard let anchor = try? JSONDecoder().decode(ReadingNoteAnchor.self, from: note.anchorData),
+                  anchor.locator.format == currentLocator.format,
+                  anchor.locator.spineIndex == currentLocator.spineIndex,
+                  anchor.locator.resourceHref == currentLocator.resourceHref else {
+                return nil
             }
 
-            const nodes = createTextWalker();
-            for (const h of highlights) {
-                const startInfo = findOffset(nodes, h.start);
-                const endInfo = findOffset(nodes, h.end);
-                if (!startInfo || !endInfo) continue;
+            let summary = note.body.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !summary.isEmpty else {
+                return nil
+            }
+            switch anchor.kind {
+            case .textSelection:
+                guard let textAnchor = anchor.textSelection,
+                      textAnchor.precision == .exactTextRange,
+                      let endOffset = textAnchor.endOffset else {
+                    return nil
+                }
+                return WebNoteMarker(
+                    id: note.id.uuidString,
+                    kind: .textSelection,
+                    endOffset: endOffset,
+                    summary: String(summary.prefix(140)),
+                    color: note.colorTag
+                )
+            case .pageLocation:
+                guard abs(anchor.locator.progression - currentLocator.progression) < 0.03 else {
+                    return nil
+                }
+                return WebNoteMarker(
+                    id: note.id.uuidString,
+                    kind: .pageLocation,
+                    endOffset: nil,
+                    summary: String(summary.prefix(140)),
+                    color: note.colorTag
+                )
+            }
+        }
+        guard let markerData = try? JSONEncoder().encode(markers),
+              let markerJSON = String(data: markerData, encoding: .utf8) else {
+            return
+        }
+        let colorMap = HighlightColorTag.allCases.map {
+            "\($0.rawValue): '\($0.webHighlightColor)'"
+        }.joined(separator: ",\n                ")
+
+        let js = """
+        (() => {
+            document.querySelectorAll('a.varq-note-marker, a.varq-page-note-marker').forEach(el => el.remove());
+
+            const styleID = 'varq-note-marker-style';
+            let style = document.getElementById(styleID);
+            if (!style) {
+                style = document.createElement('style');
+                style.id = styleID;
+                document.head.appendChild(style);
+            }
+            style.textContent = `
+                .varq-note-marker, .varq-page-note-marker {
+                    display: inline-block;
+                    box-sizing: border-box;
+                    width: 0.72em;
+                    height: 0.72em;
+                    margin-left: 0.18em;
+                    vertical-align: super;
+                    border-radius: 50%;
+                    background: var(--varq-note-color);
+                    border: 1px solid currentColor;
+                    cursor: pointer;
+                    text-decoration: none !important;
+                }
+                .varq-page-note-marker {
+                    position: fixed;
+                    z-index: 10;
+                    top: calc(1rem + var(--varq-note-index) * 1.5rem);
+                    right: 1rem;
+                    margin: 0;
+                    vertical-align: baseline;
+                }
+            `;
+
+            const colorMap = {
+                \(colorMap)
+            };
+            const notes = \(markerJSON);
+
+            function createTextWalker() {
+                const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+                let offset = 0;
+                const nodes = [];
+                let node;
+                while (node = walker.nextNode()) {
+                    nodes.push({ node, start: offset, end: offset + node.textContent.length });
+                    offset += node.textContent.length;
+                }
+                return nodes;
+            }
+
+            function markerFor(note, pageIndex) {
+                const marker = document.createElement('a');
+                marker.href = 'varq-note://' + note.id;
+                marker.className = note.kind === 'pageLocation' ? 'varq-page-note-marker' : 'varq-note-marker';
+                marker.title = note.summary;
+                marker.setAttribute('aria-label', 'Open note: ' + note.summary);
+                marker.style.setProperty('--varq-note-color', colorMap[note.color] || colorMap.saffron);
+                marker.style.setProperty('--varq-note-index', pageIndex);
+                return marker;
+            }
+
+            let pageMarkerIndex = 0;
+            for (const note of notes) {
+                if (note.kind === 'pageLocation') {
+                    document.body.appendChild(markerFor(note, pageMarkerIndex));
+                    pageMarkerIndex += 1;
+                    continue;
+                }
+                const nodes = createTextWalker();
+                const info = nodes.find(node => note.endOffset >= node.start && note.endOffset <= node.end);
+                if (!info) continue;
                 try {
                     const range = document.createRange();
-                    range.setStart(startInfo.node, startInfo.offset);
-                    range.setEnd(endInfo.node, endInfo.offset);
-                    const mark = document.createElement('mark');
-                    mark.className = 'varq-highlight';
-                    mark.style.background = colorMap[h.color] || colorMap.saffron;
-                    mark.style.color = 'inherit';
-                    range.surroundContents(mark);
-                } catch (e) {}
+                    range.setStart(info.node, note.endOffset - info.start);
+                    range.collapse(true);
+                    range.insertNode(markerFor(note, 0));
+                } catch (error) {}
             }
         })();
         """
@@ -262,6 +466,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         if nextOffset > metrics.offset {
             let progression = try await setProgression(nextOffset / metrics.maximumOffset)
             try updateCurrentLocator(progression: progression)
+            await renderNotes(storedNotes)
             return true
         }
 
@@ -269,7 +474,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         guard publication.spine.indices.contains(nextSpineIndex) else {
             return false
         }
-        try await loadSpineResource(at: nextSpineIndex, progression: 0, highlights: storedHighlights)
+        try await loadSpineResource(at: nextSpineIndex, progression: 0)
         return true
     }
 
@@ -283,6 +488,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         if previousOffset < metrics.offset {
             let progression = try await setProgression(previousOffset / metrics.maximumOffset)
             try updateCurrentLocator(progression: progression)
+            await renderNotes(storedNotes)
             return true
         }
 
@@ -290,7 +496,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         guard publication.spine.indices.contains(previousSpineIndex) else {
             return false
         }
-        try await loadSpineResource(at: previousSpineIndex, progression: 1, highlights: storedHighlights)
+        try await loadSpineResource(at: previousSpineIndex, progression: 1)
         return true
     }
 
@@ -304,12 +510,27 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
             throw BookRendererError.invalidLocator
         }
 
-        try await loadSpineResource(at: locator.spineIndex, progression: locator.progression, highlights: storedHighlights)
+        try await loadSpineResource(at: locator.spineIndex, progression: locator.progression)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         navigationContinuation?.resume()
         navigationContinuation = nil
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
+    ) {
+        guard navigationAction.request.url?.scheme == "varq-note",
+              let host = navigationAction.request.url?.host,
+              let noteID = UUID(uuidString: host) else {
+            decisionHandler(.allow)
+            return
+        }
+        noteActivationHandler?(noteID)
+        decisionHandler(.cancel)
     }
 
     func webView(
@@ -340,7 +561,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
         )
     }
 
-    private func loadSpineResource(at spineIndex: Int, progression: Double, highlights: [Highlight] = []) async throws {
+    private func loadSpineResource(at spineIndex: Int, progression: Double) async throws {
         guard let publication, publication.spine.indices.contains(spineIndex) else {
             throw BookRendererError.invalidLocator
         }
@@ -355,7 +576,8 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
             resourceHref: resource.href,
             progression: actualProgression
         )
-        await renderHighlights(highlights)
+        await renderHighlights(storedHighlights)
+        await renderNotes(storedNotes)
     }
 
     private func load(_ resource: EpubSpineResource, allowingReadAccessTo directory: URL) async throws {
@@ -501,13 +723,19 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, WKN
     }
 
     private func serializeAnchors(_ anchors: [[String: Any]]) -> String {
-        let items = anchors.map { anchor -> String in
-            let start = anchor["start"] as! Int
-            let end = anchor["end"] as! Int
-            let color = anchor["color"] as! String
-            return "{\"start\":\(start),\"end\":\(end),\"color\":\"\(color)\"}"
+        let items = anchors.compactMap { anchor -> WebHighlight? in
+            guard let start = anchor["start"] as? Int,
+                  let end = anchor["end"] as? Int,
+                  let color = anchor["color"] as? String else {
+                return nil
+            }
+            return WebHighlight(start: start, end: end, color: color)
         }
-        return "[" + items.joined(separator: ",") + "]"
+        guard let data = try? JSONEncoder().encode(items),
+              let json = String(data: data, encoding: .utf8) else {
+            return "[]"
+        }
+        return json
     }
 
     private func evaluate(script: String) async throws -> Any {
@@ -536,6 +764,20 @@ private struct WebTextSelection: Decodable {
     let exact: String
     let prefix: String?
     let suffix: String?
+}
+
+private struct WebHighlight: Encodable {
+    let start: Int
+    let end: Int
+    let color: String
+}
+
+private struct WebNoteMarker: Encodable {
+    let id: String
+    let kind: ReadingNoteAnchorKind
+    let endOffset: Int?
+    let summary: String
+    let color: String
 }
 
 private struct PaginationMetrics: Decodable {

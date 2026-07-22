@@ -6,6 +6,13 @@ enum VarqWebColor {
     static let sepia = "#F0E6D2"
     static let inkLight = "#2E2717"
     static let inkDark = "#EDE4D0"
+    static let saffron = "#E6AA5A"
+    static let terracotta = "#B5502A"
+    static let maroon = "#7A2E1D"
+    static let highlightGreen = "#92E66B"
+    static let highlightYellow = "#F6E65C"
+    static let highlightRed = "#FF6B6B"
+    static let highlightPink = "#FF7EB6"
 }
 
 extension Color {
@@ -17,6 +24,10 @@ extension Color {
     static let varqSaffron = Color(red: 230.0 / 255.0, green: 170.0 / 255.0, blue: 90.0 / 255.0)
     static let varqTerracotta = Color(red: 181.0 / 255.0, green: 80.0 / 255.0, blue: 42.0 / 255.0)
     static let varqMaroon = Color(red: 122.0 / 255.0, green: 46.0 / 255.0, blue: 29.0 / 255.0)
+    static let varqHighlightGreen = Color(red: 146.0 / 255.0, green: 230.0 / 255.0, blue: 107.0 / 255.0)
+    static let varqHighlightYellow = Color(red: 246.0 / 255.0, green: 230.0 / 255.0, blue: 92.0 / 255.0)
+    static let varqHighlightRed = Color(red: 255.0 / 255.0, green: 107.0 / 255.0, blue: 107.0 / 255.0)
+    static let varqHighlightPink = Color(red: 255.0 / 255.0, green: 126.0 / 255.0, blue: 182.0 / 255.0)
     static let varqInkLight = Color(red: 46.0 / 255.0, green: 39.0 / 255.0, blue: 23.0 / 255.0)
     static let varqInkDark = Color(red: 237.0 / 255.0, green: 228.0 / 255.0, blue: 208.0 / 255.0)
 }

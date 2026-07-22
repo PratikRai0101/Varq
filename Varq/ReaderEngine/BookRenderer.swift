@@ -16,6 +16,7 @@ protocol BookRenderer: AnyObject {
     func go(to locator: BookLocator) async throws
     func navigate(to highlightAnchor: TextHighlightAnchor) async throws
     func renderHighlights(_ highlights: [Highlight]) async
+    func renderNotes(_ notes: [ReadingNote]) async
 }
 
 extension BookRenderer {
@@ -28,6 +29,8 @@ extension BookRenderer {
     }
 
     func renderHighlights(_ highlights: [Highlight]) async {}
+
+    func renderNotes(_ notes: [ReadingNote]) async {}
 }
 
 enum BookRendererError: Error, Equatable {

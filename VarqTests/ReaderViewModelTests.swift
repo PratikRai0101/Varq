@@ -116,9 +116,69 @@ struct ReaderViewModelTests {
         #expect(highlight.colorTag == HighlightColorTag.saffron.rawValue)
         #expect(try JSONDecoder().decode(TextHighlightAnchor.self, from: highlight.locatorData) == anchor)
         #expect(renderer.renderedHighlightIDs == [[highlight.id]])
+    }
 
-        viewModel.updateNote("A useful passage", for: highlight)
-        #expect(highlight.note == "A useful passage")
+    @Test func createsAndRendersAPageNote() async throws {
+        let locator = try epubLocator(progression: 0)
+        let renderer = FakeBookRenderer(locator: locator)
+        let context = try modelContext()
+        let book = book()
+        context.insert(book)
+        try context.save()
+        let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
+        viewModel.configurePersistence(using: context)
+        await viewModel.open()
+
+        viewModel.beginPageNote()
+        let state = try #require(viewModel.noteEditorState)
+        #expect(state.anchor.kind == .pageLocation)
+        await viewModel.saveNote(body: "A personal page note", color: .highlightGreen)
+
+        let note = try #require(book.notes.first)
+        #expect(note.body == "A personal page note")
+        #expect(note.colorTag == HighlightColorTag.highlightGreen.rawValue)
+        #expect(try JSONDecoder().decode(ReadingNoteAnchor.self, from: note.anchorData) == state.anchor)
+        #expect(renderer.renderedNoteIDs.last == [note.id])
+        #expect(viewModel.noteEditorState == nil)
+    }
+
+    @Test func opensANoteEditorFromASelectedTextContextAction() async throws {
+        let locator = try epubLocator(progression: 0)
+        let selectionAnchor = try TextHighlightAnchor(
+            locator: locator,
+            startOffset: 3,
+            endOffset: 11,
+            quote: TextQuoteSelector(exact: "selected")
+        )
+        let renderer = FakeBookRenderer(locator: locator)
+        let viewModel = ReaderViewModel(book: book(), bookURL: bookURL, renderer: renderer)
+
+        renderer.sendAnnotationAction(.createNote(anchor: selectionAnchor))
+
+        let state = try #require(viewModel.noteEditorState)
+        #expect(state.anchor.kind == .textSelection)
+        #expect(state.selectedText == "selected")
+    }
+
+    @Test func opensAnExistingNoteFromAMarkerActivation() throws {
+        let locator = try epubLocator(progression: 0)
+        let anchor = ReadingNoteAnchor(pageLocator: locator)
+        let note = ReadingNote(
+            anchorData: try JSONEncoder().encode(anchor),
+            body: "A saved note",
+            colorTag: HighlightColorTag.terracotta.rawValue
+        )
+        let book = book()
+        book.notes = [note]
+        let renderer = FakeBookRenderer(locator: locator)
+        let viewModel = ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer)
+
+        renderer.sendNoteActivation(note.id)
+
+        let state = try #require(viewModel.noteEditorState)
+        #expect(state.existingNote === note)
+        #expect(state.initialBody == "A saved note")
+        #expect(state.initialColor == .terracotta)
     }
 
     @Test func rendersPersistedHighlightsThroughTheRendererInterface() async throws {
@@ -216,6 +276,7 @@ struct ReaderViewModelTests {
             for: Book.self,
             ReadingProgress.self,
             Highlight.self,
+            ReadingNote.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         return ModelContext(container)
@@ -223,19 +284,22 @@ struct ReaderViewModelTests {
 }
 
 @MainActor
-private final class FakeBookRenderer: BookRenderer, TextSelectionProviding {
+private final class FakeBookRenderer: BookRenderer, TextSelectionProviding, ReaderAnnotationInteractionProviding {
     let view = NSView()
     let supportedFormat: BookFormat = .epub
     private let initialLocator: BookLocator
     private let reportedProgressFraction: Double?
     private let advancedLocator: BookLocator?
     private let selectedAnchor: TextHighlightAnchor?
+    private var annotationActionHandler: ((ReaderAnnotationAction) -> Void)?
+    private var noteActivationHandler: ((UUID) -> Void)?
 
     private(set) var currentLocator: BookLocator?
     var readingProgressFraction: Double { reportedProgressFraction ?? currentLocator?.progression ?? 0 }
     private(set) var openedLocator: BookLocator?
     private(set) var updatedAppearance: ReadingAppearance?
     private(set) var renderedHighlightIDs: [[UUID]] = []
+    private(set) var renderedNoteIDs: [[UUID]] = []
     private(set) var navigatedHighlightAnchor: TextHighlightAnchor?
     private(set) var didClose = false
 
@@ -264,8 +328,28 @@ private final class FakeBookRenderer: BookRenderer, TextSelectionProviding {
         selectedAnchor
     }
 
+    func setAnnotationActionHandler(_ handler: @escaping (ReaderAnnotationAction) -> Void) {
+        annotationActionHandler = handler
+    }
+
+    func setNoteActivationHandler(_ handler: @escaping (UUID) -> Void) {
+        noteActivationHandler = handler
+    }
+
+    func sendAnnotationAction(_ action: ReaderAnnotationAction) {
+        annotationActionHandler?(action)
+    }
+
+    func sendNoteActivation(_ noteID: UUID) {
+        noteActivationHandler?(noteID)
+    }
+
     func renderHighlights(_ highlights: [Highlight]) async {
         renderedHighlightIDs.append(highlights.map(\.id))
+    }
+
+    func renderNotes(_ notes: [ReadingNote]) async {
+        renderedNoteIDs.append(notes.map(\.id))
     }
 
     func navigate(to highlightAnchor: TextHighlightAnchor) async throws {

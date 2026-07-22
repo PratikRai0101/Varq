@@ -20,10 +20,14 @@ Rule of thumb: the UI chrome (navigation, buttons, controls) should be as restra
 | `varqSaffron` | `#E6AA5A` | Primary accent — progress indicators, active states, highlights |
 | `varqTerracotta` | `#B5502A` | Secondary accent — icons, CTAs, brand mark stroke |
 | `varqMaroon` | `#7A2E1D` | Tertiary accent — reserved for a second highlight color option, error states |
+| `varqHighlightGreen` | `#92E66B` | Neon text-highlight option — translucent over book text |
+| `varqHighlightYellow` | `#F6E65C` | Neon text-highlight option — translucent over book text |
+| `varqHighlightRed` | `#FF6B6B` | Neon text-highlight option — translucent over book text |
+| `varqHighlightPink` | `#FF7EB6` | Neon text-highlight option — translucent over book text |
 | `varqInkLight` | `#2E2717` | Reading text color on sepia page |
 | `varqInkDark` | `#EDE4D0` | Reading text color when page is inverted to full dark mode |
 
-Do not introduce new colors outside this table without updating this file first. If a new state (e.g., a warning banner) needs a color, derive it from the closest existing token rather than picking an arbitrary new hex.
+Do not introduce new colors outside this table without updating this file first. Text highlights may use the three brand accents or the four dedicated neon highlight tokens above; use a translucent fill so selected text remains readable. If a new state (e.g., a warning banner) needs a color, derive it from the closest existing token rather than picking an arbitrary new hex.
 
 ## Typography
 

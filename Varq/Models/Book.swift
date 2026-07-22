@@ -19,6 +19,9 @@ final class Book {
     @Relationship(deleteRule: .cascade, inverse: \Highlight.book)
     var highlights: [Highlight]
 
+    @Relationship(deleteRule: .cascade, inverse: \ReadingNote.book)
+    var notes: [ReadingNote]
+
     var collections: [BookCollection]?
 
     var format: BookFormat {
@@ -48,5 +51,6 @@ final class Book {
         self.isPrivate = isPrivate
         self.readingProgress = nil
         self.highlights = []
+        self.notes = []
     }
 }

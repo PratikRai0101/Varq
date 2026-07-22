@@ -3,7 +3,7 @@
 **Status:** Draft v1.0
 **Owner:** Pratik Rai
 **Platform:** macOS (native), iOS port planned post-v1
-**Last updated:** 2026-07-21
+**Last updated:** 2026-07-22
 
 ---
 
@@ -70,7 +70,8 @@ MIT License for all first-party code. Avoids the GPL/App Store distribution ambi
 - CBZ mode: right-to-left toggle, dual-page spread, page-fit options. CBR is deferred to v1.1+ — see 'CBR deferral' note in section 8.
 
 ### 7.3 Notes & highlights
-- Text selection → highlight (multiple colors) + optional note
+- Text selection → persistent highlight, with the Varq accent and neon highlight palette
+- Separate personal notes attached to selected text or the current reader location, with clickable citation-like markers and hover summaries
 - Export highlights/notes to Markdown (Obsidian/Notion/plain-MD compatible) and JSON
 
 ### 7.4 Private shelf (Touch ID)

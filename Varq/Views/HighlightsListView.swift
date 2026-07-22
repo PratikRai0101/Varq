@@ -50,11 +50,6 @@ struct HighlightsListView: View {
     }
 
     private func color(for colorTag: String) -> Color {
-        switch HighlightColorTag(rawValue: colorTag) {
-        case .saffron: Color.varqSaffron
-        case .terracotta: Color.varqTerracotta
-        case .maroon: Color.varqMaroon
-        case nil: Color.varqSaffron
-        }
+        HighlightColorTag(rawValue: colorTag)?.varqColor ?? Color.varqSaffron
     }
 }
