@@ -131,6 +131,18 @@ nonisolated struct AIAssistantService {
         availabilityProvider.availability()
     }
 
+    func generateChapterRecap(from chapterText: String) async throws -> GeneratedReadingAid {
+        let chunks = chapterChunks(in: chapterText)
+        guard !chunks.isEmpty else { throw BoundedReadingContextError.empty }
+        var summaries: [String] = []
+        for chunk in chunks {
+            let summary = try await generate(.summarize, using: BoundedReadingContext(selectedText: chunk))
+            summaries.append(summary.text)
+        }
+        let recapContext = try BoundedReadingContext(selectedText: summaries.joined(separator: "\n\n"))
+        return try await generate(.chapterRecap, using: recapContext)
+    }
+
     func generate(
         _ kind: ReadingAidKind,
         using context: BoundedReadingContext
@@ -143,6 +155,16 @@ nonisolated struct AIAssistantService {
         }
 
         return GeneratedReadingAid(text: try await responder.respond(to: prompt(for: kind, context: context)))
+    }
+
+    private func chapterChunks(in text: String) -> [String] {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return [] }
+        return stride(from: 0, to: trimmedText.count, by: BoundedReadingContext.maximumCharacterCount).map { offset in
+            let start = trimmedText.index(trimmedText.startIndex, offsetBy: offset)
+            let end = trimmedText.index(start, offsetBy: min(BoundedReadingContext.maximumCharacterCount, trimmedText.distance(from: start, to: trimmedText.endIndex)))
+            return String(trimmedText[start..<end])
+        }
     }
 
     private func prompt(for kind: ReadingAidKind, context: BoundedReadingContext) -> String {

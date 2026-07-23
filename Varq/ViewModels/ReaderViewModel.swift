@@ -377,10 +377,9 @@ final class ReaderViewModel {
                 errorMessage = "Varq could not read this chapter."
                 return
             }
-            let context = try BoundedReadingContext(selectedText: text)
             isGeneratingReadingAid = true
             defer { isGeneratingReadingAid = false }
-            let aid = try await aiAssistantService.generate(.chapterRecap, using: context)
+            let aid = try await aiAssistantService.generateChapterRecap(from: text)
             guard let locator = renderer.currentLocator else {
                 return
             }
@@ -391,7 +390,7 @@ final class ReaderViewModel {
             )
             errorMessage = nil
         } catch is BoundedReadingContextError {
-            errorMessage = "This chapter is too long to recap on-device."
+            errorMessage = "Varq could not prepare this chapter recap."
         } catch let error as AIAssistantServiceError {
             if case .unavailable(let reason) = error {
                 intelligenceUnavailableReason = reason

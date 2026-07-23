@@ -39,6 +39,21 @@ struct AIAssistantServiceTests {
         ])
     }
 
+    @Test func recapsLongChaptersBySummarizingBoundedChunks() async throws {
+        let responder = RecordingAIAssistantResponder(response: "Condensed chapter")
+        let service = AIAssistantService(
+            availabilityProvider: TestAIAssistantAvailabilityProvider(.available),
+            responder: responder
+        )
+
+        let recap = try await service.generateChapterRecap(
+            from: String(repeating: "a", count: BoundedReadingContext.maximumCharacterCount + 1)
+        )
+
+        #expect(recap.text == "Condensed chapter")
+        #expect(await responder.prompts.count == 3)
+    }
+
     @Test func rejectsContextThatExceedsTheBound() throws {
         let text = String(repeating: "a", count: BoundedReadingContext.maximumCharacterCount + 1)
 
