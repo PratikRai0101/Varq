@@ -32,8 +32,8 @@ enum AppAppearance: String, CaseIterable, Sendable {
         case .system: "System"
         case .light: "Light"
         case .indigo: "Indigo"
-        case .black: "Black"
-        case .monochrome: "Mono"
+        case .black: "Black with accents"
+        case .monochrome: "Monochrome"
         }
     }
 }

@@ -70,7 +70,7 @@ struct SettingsView: View {
             SettingsSection("Appearance") {
                 SettingsRow(
                     title: "App appearance",
-                    detail: "Choose a light, indigo, black, monochrome, or system-matched interface."
+                    detail: "Choose a system appearance, light mode, or one of three dark themes."
                 ) {
                     Picker("App appearance", selection: appearanceBinding) {
                         ForEach(AppAppearance.allCases, id: \.self) { appearance in
@@ -78,7 +78,7 @@ struct SettingsView: View {
                         }
                     }
                     .labelsHidden()
-                    .pickerStyle(.segmented)
+                    .pickerStyle(.menu)
                     .frame(maxWidth: VarqLayout.settingsControlMaximumWidth)
                     .accessibilityLabel("App appearance")
                 }
