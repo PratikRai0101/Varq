@@ -271,8 +271,7 @@ struct ReaderView: View {
 
     @ViewBuilder
     private var assistantSidebar: some View {
-        HStack(spacing: 0) {
-            Spacer()
+        Group {
             if let kind = viewModel.readingAidInProgress {
                 ReadingAssistantProgressView(kind: kind)
             } else if let result = viewModel.generatedReadingAid {
@@ -285,9 +284,10 @@ struct ReaderView: View {
                 ReadingAssistantEmptyView()
             }
         }
+        .frame(width: VarqLayout.readingAidPanelWidth)
         .frame(maxHeight: .infinity)
-        .frame(width: VarqLayout.readingAidPanelWidth, alignment: .trailing)
         .background(Color.varqParchment)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
         .padding(VarqSpacing.regular)
     }
 
