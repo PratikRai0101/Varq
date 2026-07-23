@@ -7,6 +7,7 @@ struct GeneratedReadingAidResult: Identifiable, Equatable {
     let id = UUID()
     let kind: ReadingAidKind
     let text: String
+    let anchor: TextHighlightAnchor
 }
 
 @MainActor
@@ -240,6 +241,17 @@ final class ReaderViewModel {
         generatedReadingAid = nil
     }
 
+    func saveGeneratedReadingAidAsNote() {
+        guard let generatedReadingAid else {
+            return
+        }
+        noteEditorState = NoteEditorState(
+            anchor: ReadingNoteAnchor(textSelection: generatedReadingAid.anchor),
+            initialBody: generatedReadingAid.text
+        )
+        self.generatedReadingAid = nil
+    }
+
     func beginPageNote() {
         guard let locator = renderer.currentLocator else {
             return
@@ -354,7 +366,7 @@ final class ReaderViewModel {
             isGeneratingReadingAid = true
             defer { isGeneratingReadingAid = false }
             let aid = try await aiAssistantService.generate(kind, using: context)
-            generatedReadingAid = GeneratedReadingAidResult(kind: kind, text: aid.text)
+            generatedReadingAid = GeneratedReadingAidResult(kind: kind, text: aid.text, anchor: anchor)
             errorMessage = nil
         } catch let error as AIAssistantServiceError {
             switch error {

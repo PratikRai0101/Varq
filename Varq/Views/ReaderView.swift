@@ -30,6 +30,18 @@ struct ReaderView: View {
                 PageTurnOverlay(direction: pageTurnDirection, progress: pageTurnProgress)
             }
 
+            if let result = viewModel.generatedReadingAid {
+                HStack {
+                    Spacer()
+                    GeneratedReadingAidPanel(
+                        result: result,
+                        saveAsNote: viewModel.saveGeneratedReadingAidAsNote,
+                        dismiss: viewModel.dismissGeneratedReadingAid
+                    )
+                }
+                .padding(VarqSpacing.large)
+            }
+
             if let errorMessage = viewModel.errorMessage {
                 VStack {
                     Text(errorMessage)
@@ -191,18 +203,6 @@ struct ReaderView: View {
             }
         } message: {
             Text("Varq will process the selected text on this Mac. This permission applies only to this private book and can be revoked later.")
-        }
-        .sheet(
-            item: Binding(
-                get: { viewModel.generatedReadingAid },
-                set: { result in
-                    if result == nil {
-                        viewModel.dismissGeneratedReadingAid()
-                    }
-                }
-            )
-        ) { result in
-            GeneratedReadingAidView(result: result, dismiss: viewModel.dismissGeneratedReadingAid)
         }
         .sheet(
             item: Binding(

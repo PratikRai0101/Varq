@@ -153,11 +153,11 @@ nonisolated struct AIAssistantService {
         case .summarize:
             instruction = "Summarize the selected passage concisely."
         case .discussionQuestions:
-            instruction = "Write thoughtful discussion questions about the selected passage."
+            instruction = "Write up to five thoughtful discussion questions about the selected passage as a numbered list."
         }
 
         return """
-        \(instruction) Use only the passage below. If the passage does not contain enough information, say so rather than inventing details.
+        \(instruction) Use only the passage below. If the passage does not contain enough information, say so rather than inventing details. Respond in plain text and do not use Markdown.
 
         Selected passage:
         \(context.selectedText)

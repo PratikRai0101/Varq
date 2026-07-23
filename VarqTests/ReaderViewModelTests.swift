@@ -195,6 +195,36 @@ struct ReaderViewModelTests {
         #expect(await responder.prompts.count == 1)
     }
 
+    @Test func opensANoteEditorWithTheGeneratedReadingAid() async throws {
+        let locator = try epubLocator(progression: 0)
+        let anchor = try TextHighlightAnchor(
+            locator: locator,
+            startOffset: 0,
+            endOffset: 8,
+            quote: TextQuoteSelector(exact: "A passage")
+        )
+        let renderer = FakeBookRenderer(locator: locator, selectedAnchor: anchor)
+        let assistant = AIAssistantService(
+            availabilityProvider: ReaderTestAIAssistantAvailabilityProvider(.available),
+            responder: ReaderTestAIAssistantResponder(response: "Saved response")
+        )
+        let viewModel = ReaderViewModel(
+            book: book(),
+            bookURL: bookURL,
+            renderer: renderer,
+            initialReadingAppearance: ReadingAppearance(),
+            privateBookSessionService: PrivateBookSessionService(),
+            aiAssistantService: assistant
+        )
+        await viewModel.requestReadingAid(.summarize)
+
+        viewModel.saveGeneratedReadingAidAsNote()
+
+        #expect(viewModel.generatedReadingAid == nil)
+        #expect(viewModel.noteEditorState?.selectedText == "A passage")
+        #expect(viewModel.noteEditorState?.initialBody == "Saved response")
+    }
+
     @Test func requestsConsentBeforeGeneratingForAPrivateBook() async throws {
         let locator = try epubLocator(progression: 0)
         let anchor = try TextHighlightAnchor(

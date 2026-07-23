@@ -18,6 +18,8 @@ enum VarqLayout {
     static let pageTurnShadowRadius: CGFloat = 16
     static let noteEditorMinimumWidth: CGFloat = 360
     static let noteEditorMinimumHeight: CGFloat = 260
+    static let readingAidPanelWidth: CGFloat = 420
+    static let readingAidPanelMinimumHeight: CGFloat = 340
     static let settingsWindowWidth: CGFloat = 720
     static let settingsWindowHeight: CGFloat = 620
     static let settingsTabWidth: CGFloat = 96

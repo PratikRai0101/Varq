@@ -8,12 +8,12 @@ struct NoteEditorState: Identifiable {
     let initialBody: String
     let initialColor: HighlightColorTag
 
-    init(anchor: ReadingNoteAnchor) {
+    init(anchor: ReadingNoteAnchor, initialBody: String = "") {
         id = UUID()
         self.anchor = anchor
         selectedText = anchor.selectedText
         existingNote = nil
-        initialBody = ""
+        self.initialBody = initialBody
         initialColor = .saffron
     }
 

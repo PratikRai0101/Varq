@@ -52,21 +52,39 @@ struct ReadingAssistantControls: View {
     }
 }
 
-struct GeneratedReadingAidView: View {
+struct GeneratedReadingAidPanel: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.varqDarkTheme) private var darkTheme
 
     let result: GeneratedReadingAidResult
+    let saveAsNote: () -> Void
     let dismiss: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: VarqSpacing.regular) {
-            Text(result.kind.displayName)
-                .font(VarqTypography.uiMedium(.title2))
-                .foregroundStyle(primaryTextColor)
+            HStack(alignment: .firstTextBaseline, spacing: VarqSpacing.compact) {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(accentColor)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: VarqSpacing.compact) {
+                    Text(result.kind.displayName)
+                        .font(VarqTypography.uiMedium(.headline))
+                        .foregroundStyle(primaryTextColor)
+                    Text("On-device response about your selection")
+                        .font(VarqTypography.ui(.caption))
+                        .foregroundStyle(primaryTextColor.opacity(VarqOpacity.secondaryText))
+                }
+
+                Spacer()
+
+                Button("Close", systemImage: "xmark", action: dismiss)
+                    .labelStyle(.iconOnly)
+                    .accessibilityLabel("Close reading aid")
+            }
 
             ScrollView {
-                Text(result.text)
+                Text(plainText)
                     .font(VarqTypography.ui(.body))
                     .foregroundStyle(primaryTextColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -77,17 +95,33 @@ struct GeneratedReadingAidView: View {
             .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.compact))
 
             HStack {
+                Button("Save as note", systemImage: "note.text.badge.plus", action: saveAsNote)
+                    .buttonStyle(.bordered)
+
                 Spacer()
+
                 Button("Done", action: dismiss)
+                    .buttonStyle(.borderedProminent)
+                    .tint(accentColor)
                     .keyboardShortcut(.defaultAction)
             }
         }
         .padding(VarqSpacing.large)
-        .frame(
-            minWidth: VarqLayout.noteEditorMinimumWidth,
-            minHeight: VarqLayout.noteEditorMinimumHeight
-        )
+        .frame(width: VarqLayout.readingAidPanelWidth)
+        .frame(minHeight: VarqLayout.readingAidPanelMinimumHeight)
         .background(backgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.regular))
+        .overlay {
+            RoundedRectangle(cornerRadius: VarqSpacing.regular)
+                .stroke(accentColor.opacity(VarqOpacity.settingsTabBorder))
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var plainText: String {
+        result.text
+            .replacingOccurrences(of: "**", with: "")
+            .replacingOccurrences(of: "__", with: "")
     }
 
     private var backgroundColor: Color {
@@ -100,5 +134,9 @@ struct GeneratedReadingAidView: View {
 
     private var primaryTextColor: Color {
         colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight
+    }
+
+    private var accentColor: Color {
+        colorScheme == .dark ? darkTheme.accent : Color.varqSaffron
     }
 }
