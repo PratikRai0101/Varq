@@ -46,7 +46,7 @@ The long-term vision includes an iOS companion app, iCloud sync, an on-device AI
 | Persistence | SwiftData | Native, modern, low-boilerplate local DB |
 | Architecture | MVVM | Clean separation of parsing/business logic from views |
 | Biometrics | LocalAuthentication + CryptoKit + Keychain | Touch ID-gated private shelf with real encryption, not just UI hiding |
-| AI (v1.1+) | Foundation Models framework | On-device summarization/lookup, zero API cost under Small Business Program |
+| AI (v1.1+) | Foundation Models framework | On-device summaries/lookup on eligible Macs; Private Cloud Compute is a later opt-in subject to program eligibility and quotas |
 | Sync (v1.1+) | CloudKit | Free infra, native iCloud account integration |
 
 ## 6. Licensing
@@ -89,13 +89,16 @@ MIT License for all first-party code. Avoids the GPL/App Store distribution ambi
 - CBR (RAR-based comic archive) support. Deferred from MVP — see 'CBR deferral' note below.
 - MOBI/AZW3/FB2 → EPUB auto-conversion on import
 - Metadata auto-scraper (Open Library / Google Books API)
-- On-device AI: chapter summaries, vocabulary lookup, Q&A via Foundation Models
+- On-device AI: selected-passage aids, chapter summaries, visible-page explanation, and grounded Q&A via Foundation Models; see `docs/ROADMAP.md`
+- Obsidian Vault Export with local Markdown/wikilinks, followed later by direct Notion integration
 - Handoff + iCloud sync (CloudKit)
 - Bionic reading / RSVP mode
 - OPDS server
 - Reading stats/streaks (local only)
 - Siri / Shortcuts / App Intents integration
 - iOS companion app
+
+The approved dependency order, privacy commitments, and release sequencing for these items live in `docs/ROADMAP.md`.
 
 CBR deferral (2026-07-21): CBR support requires an unrar decoder, since RAR is a proprietary compression format. Research found two viable Swift options — UnrarKit (BSD-2 wrapper, no SPM support, last released 2022) and Unrar.swift (MIT wrapper, SPM-native, actively maintained) — but both bundle RARLab's UnRAR C source, which carries its own separate, non-SPDX 'freeware' license (permissive for reading/extracting RAR archives, restricted only around recreating the proprietary RAR compression algorithm). This license is genuinely usable — many shipped Mac/iOS apps rely on it — but it doesn't fit cleanly into standard OSS license auditing, and this ambiguity wasn't worth blocking MVP delivery over. Decision: ship CBZ-only for v1.0; revisit CBR in v1.1+ using Unrar.swift specifically (not UnrarKit, for its better maintenance and native SPM support), once real usage data indicates it's worth the residual licensing ambiguity.
 

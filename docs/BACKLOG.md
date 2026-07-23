@@ -73,5 +73,18 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [ ] Address TestFlight feedback
 - [ ] Submit for App Store review
 
-## Explicitly out of scope for this backlog (v1.1+, see PRD section 8)
-CBR support (unless `docs/PRD.md`'s CBR deferral decision has been revisited), MOBI/AZW3/FB2 conversion, metadata auto-scraper, on-device AI features, CloudKit sync/Handoff, bionic reading/RSVP, OPDS, reading stats, Siri/Shortcuts/App Intents, iOS app. Do not pull these into the active backlog without updating `PRD.md` first.
+## Phase 10 — v1.1 local intelligence & knowledge export
+
+See `docs/ROADMAP.md` for the approved release sequence and `docs/adr/0009-keep-private-content-local-by-default.md` for the private-content policy.
+
+- [ ] Implement the bounded-context `AIAssistantService` module with macOS 26 availability handling and deterministic test adapter
+- [ ] Enforce private-content consent policy at intelligence, index, and export destinations
+- [ ] Add selected-passage explain, simplify, summarize, and discussion-question aids
+- [ ] Add EPUB chapter recap with evaluation coverage
+- [ ] Add explicit on-device PDF/CBZ visible-page explanation
+- [ ] Add Obsidian Vault Export with stable Markdown, canonical wikilinks, and sandbox-safe chosen-folder access
+- [ ] Add Notion-ready Markdown export profile (direct Notion integration remains later)
+- [ ] Add annotation replay, local reading goals/streaks, reading-session timer, and estimated time remaining
+
+## Deferred beyond Phase 10
+CBR support (unless `docs/PRD.md`'s CBR deferral decision has been revisited), MOBI/AZW3/FB2 conversion, metadata auto-scraper, CloudKit sync/Handoff, bionic reading/RSVP, OPDS, Siri/Shortcuts/App Intents, and the iOS app remain planned for later releases in `docs/ROADMAP.md`. Do not pull them into the active backlog without completing their listed prerequisites.

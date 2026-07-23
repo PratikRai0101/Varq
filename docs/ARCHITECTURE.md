@@ -101,4 +101,6 @@ See `docs/adr/0006-encrypt-private-books-before-marking-them-private.md`: encryp
 ## Deferred architecture decisions (v1.1+, do not build against these yet)
 
 - CloudKit sync will require adding a sync-conflict resolution strategy to `ReadingProgress` and `Highlight` — don't build assumptions today that would block adding a `lastModified`/CRDT-style merge strategy later
-- Foundation Models integration will likely live in a new `Services/AIAssistantService.swift` — keep `ReaderViewModel` decoupled enough that this can be added without a major refactor
+- Foundation Models integration belongs in a new `Services/AIAssistantService.swift`. Give it a small interface over bounded reading context and requested reading aid; do not expose prompts, Foundation Models types, or provider choices to `ReaderViewModel`.
+- Local intelligence, Spotlight indexing, Private Cloud Compute, and vault exports are separate content destinations. Enforce private-book consent before each destination, per `docs/adr/0009-keep-private-content-local-by-default.md`.
+- Obsidian Vault Export must use a system folder chooser and security-scoped bookmark; it must write only inside a dedicated Varq export directory and never modify unrelated user vault files.
