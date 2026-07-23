@@ -31,6 +31,14 @@ struct ReaderView: View {
                 PageTurnOverlay(direction: pageTurnDirection, progress: pageTurnProgress)
             }
 
+            if let kind = viewModel.readingAidInProgress {
+                Color.varqInkLight
+                    .opacity(VarqOpacity.pageTurnOverlay)
+                    .ignoresSafeArea()
+                ReadingAssistantProgressView(kind: kind)
+                    .transition(.opacity)
+            }
+
             if let result = viewModel.generatedReadingAid {
                 HStack {
                     Spacer()

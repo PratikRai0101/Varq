@@ -54,6 +54,52 @@ struct ReadingAssistantControls: View {
     }
 }
 
+struct ReadingAssistantProgressView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
+
+    let kind: ReadingAidKind
+
+    var body: some View {
+        VStack(spacing: VarqSpacing.regular) {
+            ProgressView()
+                .controlSize(.large)
+                .tint(accentColor)
+            Text(progressTitle)
+                .font(VarqTypography.uiMedium(.headline))
+                .foregroundStyle(primaryTextColor)
+            Text("Using Apple Intelligence on this Mac. This can take a moment.")
+                .font(VarqTypography.ui(.body))
+                .foregroundStyle(primaryTextColor.opacity(VarqOpacity.secondaryText))
+                .multilineTextAlignment(.center)
+        }
+        .padding(VarqSpacing.large)
+        .frame(maxWidth: VarqLayout.highlightEmptyStateMaximumWidth)
+        .background(colorScheme == .dark ? darkTheme.surface : Color.varqParchment)
+        .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.regular))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(progressTitle). Please wait.")
+    }
+
+    private var progressTitle: String {
+        switch kind {
+        case .explain: "Explaining your selection"
+        case .simplify: "Simplifying your selection"
+        case .summarize: "Summarizing your selection"
+        case .discussionQuestions: "Writing discussion questions"
+        case .chapterRecap: "Creating chapter recap"
+        }
+    }
+
+    private var primaryTextColor: Color {
+        colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight
+    }
+
+    private var accentColor: Color {
+        colorScheme == .dark ? darkTheme.accent : Color.varqSaffron
+    }
+}
+
 struct GeneratedReadingAidPanel: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.varqDarkTheme) private var darkTheme

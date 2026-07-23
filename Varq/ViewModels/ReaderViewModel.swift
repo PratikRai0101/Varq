@@ -31,6 +31,7 @@ final class ReaderViewModel {
     private(set) var intelligenceUnavailableReason: AIAssistantUnavailableReason?
     private(set) var isPrivateBookIntelligenceConsentPresented = false
     private(set) var isGeneratingReadingAid = false
+    private(set) var readingAidInProgress: ReadingAidKind?
     private(set) var errorMessage: String?
     var rendererView: NSView { renderer.view }
     var highlightedBook: Book { book }
@@ -400,7 +401,11 @@ final class ReaderViewModel {
                 return
             }
             isGeneratingReadingAid = true
-            defer { isGeneratingReadingAid = false }
+            readingAidInProgress = .chapterRecap
+            defer {
+                isGeneratingReadingAid = false
+                readingAidInProgress = nil
+            }
             let aid = try await aiAssistantService.generateChapterRecap(from: text)
             guard let locator = renderer.currentLocator else {
                 return
@@ -435,7 +440,11 @@ final class ReaderViewModel {
             }
             let context = try BoundedReadingContext(selectedText: anchor.quote.exact)
             isGeneratingReadingAid = true
-            defer { isGeneratingReadingAid = false }
+            readingAidInProgress = kind
+            defer {
+                isGeneratingReadingAid = false
+                readingAidInProgress = nil
+            }
             let aid = try await aiAssistantService.generate(kind, using: context)
             generatedReadingAid = GeneratedReadingAidResult(
                 kind: kind,
