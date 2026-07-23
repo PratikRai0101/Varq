@@ -17,6 +17,33 @@ struct ReaderViewModelTests {
         #expect(viewModel.errorMessage == nil)
     }
 
+    @Test func appliesTheInjectedReadingDefaultsWhenOpening() async throws {
+        let locator = try epubLocator(progression: 0)
+        let renderer = FakeBookRenderer(locator: locator)
+        let expectedAppearance = ReadingAppearance(
+            pageTone: .dark,
+            fontFamily: .newYork,
+            fontSize: 20,
+            lineHeight: 1.7,
+            horizontalMargin: 40
+        )
+        let settingsStore = ReaderTestSettingsStore(
+            settings: AppSettings(defaultReadingAppearance: expectedAppearance)
+        )
+        let viewModel = ReaderViewModel(
+            book: book(),
+            bookURL: bookURL,
+            renderer: renderer,
+            settingsStore: settingsStore,
+            privateBookSessionService: PrivateBookSessionService()
+        )
+
+        await viewModel.open()
+
+        #expect(viewModel.readingAppearance == expectedAppearance)
+        #expect(renderer.updatedAppearance == expectedAppearance)
+    }
+
     @Test func recordsTheInitialLocatorWhenOpening() async throws {
         let initialLocator = try epubLocator(progression: 0)
         let renderer = FakeBookRenderer(locator: initialLocator)
@@ -371,6 +398,27 @@ struct ReaderViewModelTests {
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
         return ModelContext(container)
+    }
+}
+
+@MainActor
+private final class ReaderTestSettingsStore: AppSettingsStoring {
+    private var settings: AppSettings
+
+    init(settings: AppSettings) {
+        self.settings = settings
+    }
+
+    func load() -> AppSettings {
+        settings
+    }
+
+    func save(_ settings: AppSettings) {
+        self.settings = settings
+    }
+
+    func reset() {
+        settings = AppSettings()
     }
 }
 

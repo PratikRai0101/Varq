@@ -5,18 +5,25 @@ final class VarqAppDelegate: NSObject, NSApplicationDelegate {
     private let sessionService = PrivateBookSessionService()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let appearance = UserDefaults.standard.string(forKey: "appAppearanceOverride") ?? "system"
-        switch appearance {
-        case "light":
-            NSApp.appearance = NSAppearance(named: .aqua)
-        case "dark":
-            NSApp.appearance = NSAppearance(named: .darkAqua)
-        default:
-            NSApp.appearance = nil
-        }
+        let settings = UserDefaultsAppSettingsStore().load()
+        AppAppearance.apply(settings.appearance)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         sessionService.endApplicationSession()
+    }
+}
+
+@MainActor
+extension AppAppearance {
+    static func apply(_ appearance: AppAppearance) {
+        switch appearance {
+        case .light:
+            NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark:
+            NSApp.appearance = NSAppearance(named: .darkAqua)
+        case .system:
+            NSApp.appearance = nil
+        }
     }
 }

@@ -49,6 +49,12 @@ Do not introduce new colors outside this table without updating this file first.
 - Prefer spring animations (`'.spring(response:dampingFraction:)'`) over linear/ease-in-out for anything the user directly triggers (swipes, taps) — this is what makes SwiftUI feel "fluid" versus a web-wrapper.
 - Respect `reduceMotion` accessibility setting — provide a cross-fade fallback for the page-turn animation.
 
+## Settings / preferences
+
+- Preferences use a centered top icon-tab strip (General, Reading, Library, Advanced), followed by generously spaced section cards. This should feel like a focused native macOS preferences window, not a dense system `Form`.
+- In light mode, cards use `varqParchmentDeep` on `varqParchment`; in dark mode, use `varqIndigoLight` on `varqIndigo`. Active tabs use the same restrained surfaces with a subtle `varqSaffron` outline.
+- Settings must be functional. Do not add controls for deferred features (such as cloud sync or reading goals) merely to fill the layout; use useful local preferences and defaults instead.
+
 ## Light / dark / sepia modes
 
 Varq has three reading-relevant states, not just two:

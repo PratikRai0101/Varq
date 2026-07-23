@@ -18,6 +18,13 @@ enum VarqLayout {
     static let pageTurnShadowRadius: CGFloat = 16
     static let noteEditorMinimumWidth: CGFloat = 360
     static let noteEditorMinimumHeight: CGFloat = 260
+    static let settingsWindowWidth: CGFloat = 720
+    static let settingsWindowHeight: CGFloat = 620
+    static let settingsTabWidth: CGFloat = 96
+    static let settingsTabHeight: CGFloat = 80
+    static let settingsControlMaximumWidth: CGFloat = 240
+    static let settingsContentMaximumWidth: CGFloat = 640
+    static let settingsDividerHeight: CGFloat = 1
 }
 
 enum VarqMotion {
@@ -30,6 +37,10 @@ enum VarqMotion {
 enum VarqOpacity {
     static let pageTurnOverlay = 0.22
     static let pageTurnShadow = 0.32
+    static let settingsTabBorder = 0.35
+    static let settingsSecondaryText = 0.72
+    static let settingsDividerLight = 0.24
+    static let settingsDividerDark = 0.32
 }
 
 enum VarqTypography {

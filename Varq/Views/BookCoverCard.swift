@@ -3,6 +3,8 @@ import SwiftUI
 
 struct BookCoverCard: View {
     @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(AppSettingsKey.showsReadingProgress) private var showsReadingProgress = true
+    @AppStorage(AppSettingsKey.showsPrivateBookBadges) private var showsPrivateBookBadges = true
 
     let book: Book
 
@@ -10,8 +12,8 @@ struct BookCoverCard: View {
         VStack(alignment: .leading, spacing: VarqSpacing.compact) {
             cover
             progressIndicator
-                .opacity(book.readingProgress == nil ? 0 : 1)
-                .accessibilityHidden(book.readingProgress == nil)
+                .opacity(shouldShowReadingProgress ? 1 : 0)
+                .accessibilityHidden(!shouldShowReadingProgress)
 
             VStack(alignment: .leading, spacing: VarqSpacing.compact) {
                 Text(verbatim: book.title)
@@ -28,8 +30,8 @@ struct BookCoverCard: View {
                     .font(VarqTypography.ui(.caption))
                     .foregroundStyle(Color.varqSaffron)
                     .lineLimit(1, reservesSpace: true)
-                    .opacity(book.readingProgress == nil ? 0 : 1)
-                    .accessibilityHidden(book.readingProgress == nil)
+                    .opacity(shouldShowReadingProgress ? 1 : 0)
+                    .accessibilityHidden(!shouldShowReadingProgress)
             }
             // Pad both edges so glyph overhang stays inside the card bounds.
             .padding(.horizontal, VarqSpacing.regular)
@@ -39,6 +41,10 @@ struct BookCoverCard: View {
         .padding(.bottom, VarqSpacing.compact)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(book.title) by \(book.author)")
+    }
+
+    private var shouldShowReadingProgress: Bool {
+        showsReadingProgress && book.readingProgress != nil
     }
 
     private var progressValue: Double {
@@ -80,7 +86,7 @@ struct BookCoverCard: View {
                         }
                 }
 
-                if book.isPrivate {
+                if book.isPrivate && showsPrivateBookBadges {
                     Image(systemName: "lock.fill")
                         .font(VarqTypography.ui(.caption))
                         .foregroundStyle(Color.varqSaffron)

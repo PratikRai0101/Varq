@@ -13,7 +13,7 @@ final class ReaderViewModel {
     private var modelContext: ModelContext?
 
     private(set) var currentLocator: BookLocator?
-    private(set) var readingAppearance = ReadingAppearance()
+    private(set) var readingAppearance: ReadingAppearance
     private(set) var noteEditorState: NoteEditorState?
     private(set) var errorMessage: String?
     var rendererView: NSView { renderer.view }
@@ -22,15 +22,43 @@ final class ReaderViewModel {
     var supportsEpubLayoutControls: Bool { renderer.supportedFormat == .epub }
     var supportsTextHighlights: Bool { renderer is any TextSelectionProviding }
 
+    convenience init(book: Book, bookURL: URL, renderer: some BookRenderer) {
+        self.init(
+            book: book,
+            bookURL: bookURL,
+            renderer: renderer,
+            settingsStore: UserDefaultsAppSettingsStore(),
+            privateBookSessionService: PrivateBookSessionService()
+        )
+    }
+
+    convenience init(
+        book: Book,
+        bookURL: URL,
+        renderer: some BookRenderer,
+        settingsStore: any AppSettingsStoring,
+        privateBookSessionService: PrivateBookSessionService
+    ) {
+        self.init(
+            book: book,
+            bookURL: bookURL,
+            renderer: renderer,
+            initialReadingAppearance: settingsStore.load().defaultReadingAppearance,
+            privateBookSessionService: privateBookSessionService
+        )
+    }
+
     init(
         book: Book,
         bookURL: URL,
         renderer: some BookRenderer,
-        privateBookSessionService: PrivateBookSessionService = PrivateBookSessionService()
+        initialReadingAppearance: ReadingAppearance,
+        privateBookSessionService: PrivateBookSessionService
     ) {
         self.book = book
         self.bookURL = bookURL
         self.renderer = renderer
+        self.readingAppearance = initialReadingAppearance
         self.privateBookSessionService = privateBookSessionService
 
         if let interactionRenderer = renderer as? any ReaderAnnotationInteractionProviding {
@@ -52,6 +80,7 @@ final class ReaderViewModel {
             let initialLocator = locator ?? storedLocator()
             let readerURL = try privateBookSessionService.readerURL(for: book, managedFileURL: bookURL)
             try await renderer.open(bookURL: readerURL, at: initialLocator)
+            try await renderer.updateReadingAppearance(readingAppearance)
             currentLocator = renderer.currentLocator
             persistCurrentLocator()
             await renderer.renderHighlights(book.highlights)
