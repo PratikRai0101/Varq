@@ -136,6 +136,17 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
         guard let publication else {
             return []
         }
+        if let navigationURL = epubNavigationURL(in: publication.rootDirectory),
+           let navigationMarkup = try? String(contentsOf: navigationURL, encoding: .utf8),
+           let navigationEntries = authoredTableOfContents(
+                navigationMarkup,
+                navigationURL: navigationURL,
+                publication: publication
+           ),
+           !navigationEntries.isEmpty {
+            return navigationEntries
+        }
+
         return publication.spine.enumerated().compactMap { index, resource in
             guard let locator = try? BookLocator(
                 format: .epub,
@@ -159,6 +170,46 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
             return nil
         }
         return text
+    }
+
+    private func epubNavigationURL(in rootDirectory: URL) -> URL? {
+        let enumerator = FileManager.default.enumerator(
+            at: rootDirectory,
+            includingPropertiesForKeys: nil
+        )
+        while let url = enumerator?.nextObject() as? URL {
+            let name = url.lastPathComponent.lowercased()
+            if name.hasSuffix(".ncx") || name == "nav.xhtml" || name == "nav.html" {
+                return url
+            }
+        }
+        return nil
+    }
+
+    private func authoredTableOfContents(
+        _ markup: String,
+        navigationURL: URL,
+        publication: EpubPublication
+    ) -> [ReaderTableOfContentsEntry]? {
+        let pattern: String
+        if navigationURL.pathExtension.lowercased() == "ncx" {
+            pattern = "(?s)<navPoint\\b.*?<text[^>]*>(.*?)</text>.*?<content\\s+src=\\\"([^\\\"]+)\\\""
+        } else {
+            pattern = "(?s)<a[^>]+href=\\\"([^\\\"]+)\\\"[^>]*>(.*?)</a>"
+        }
+        guard let expression = try? NSRegularExpression(pattern: pattern) else { return nil }
+        return expression.matches(in: markup, range: NSRange(markup.startIndex..., in: markup)).compactMap { match in
+            let titleRange = navigationURL.pathExtension.lowercased() == "ncx" ? 1 : 2
+            let hrefRange = navigationURL.pathExtension.lowercased() == "ncx" ? 2 : 1
+            guard let title = Range(match.range(at: titleRange), in: markup),
+                  let href = Range(match.range(at: hrefRange), in: markup) else { return nil }
+            let target = String(markup[href]).split(separator: "#", maxSplits: 1).first.map(String.init) ?? ""
+            let targetURL = navigationURL.deletingLastPathComponent().appendingPathComponent(target).standardizedFileURL
+            guard let spineIndex = publication.spine.firstIndex(where: { $0.fileURL.standardizedFileURL == targetURL }),
+                  let locator = try? BookLocator(format: .epub, spineIndex: spineIndex, resourceHref: publication.spine[spineIndex].href, progression: 0) else { return nil }
+            let plainTitle = String(markup[title]).replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
+            return plainTitle.isEmpty ? nil : ReaderTableOfContentsEntry(id: match.range.location, title: plainTitle, locator: locator)
+        }
     }
 
     private func chapterTitle(for resource: EpubSpineResource, index: Int) -> String {
