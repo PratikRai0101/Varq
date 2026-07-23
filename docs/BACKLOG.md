@@ -79,7 +79,8 @@ See `docs/ROADMAP.md` for the approved release sequence and `docs/adr/0009-keep-
 
 - [x] Add an `AIAssistantService` availability seam with macOS 26 handling and a deterministic test adapter
 - [x] Implement bounded reading-context requests in `AIAssistantService`
-- [ ] Enforce private-content consent policy at intelligence, index, and export destinations
+- [x] Add per-book local-intelligence consent policy for private books
+- [ ] Enforce private-content consent policy at future index, export, and Private Cloud Compute destinations
 - [ ] Add selected-passage explain, simplify, summarize, and discussion-question aids
 - [ ] Add EPUB chapter recap with evaluation coverage
 - [ ] Add explicit on-device PDF/CBZ visible-page explanation
