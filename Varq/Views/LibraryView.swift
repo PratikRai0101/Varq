@@ -107,7 +107,7 @@ struct LibraryView: View {
 
             Rectangle()
                 .fill(
-                    Color.varqSaffron.opacity(
+                    (colorScheme == .dark ? darkTheme.accent : Color.varqSaffron).opacity(
                         colorScheme == .dark ? VarqOpacity.settingsDividerDark : VarqOpacity.settingsDividerLight
                     )
                 )
@@ -516,6 +516,7 @@ struct LibraryView: View {
 
 private struct CollectionIconPicker: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
     @Binding var selectedIcon: String
 
     private let iconOptions: [String] = [
@@ -542,14 +543,14 @@ private struct CollectionIconPicker: View {
                     } label: {
                         Image(systemName: icon)
                             .font(VarqTypography.ui(.title3))
-                            .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
+                            .foregroundStyle(colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight)
                             .frame(width: VarqLayout.collectionIconSize, height: VarqLayout.collectionIconSize)
-                            .background(selectedIcon == icon ? Color.varqSaffron.opacity(VarqOpacity.selectedCollectionIcon) : Color.clear)
+                            .background(selectedIcon == icon ? (colorScheme == .dark ? darkTheme.accent : Color.varqSaffron).opacity(VarqOpacity.selectedCollectionIcon) : Color.clear)
                             .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.compact))
                             .overlay(
                                 RoundedRectangle(cornerRadius: VarqSpacing.compact)
                                     .stroke(
-                                        selectedIcon == icon ? Color.varqSaffron : Color.clear,
+                                        selectedIcon == icon ? (colorScheme == .dark ? darkTheme.accent : Color.varqSaffron) : Color.clear,
                                         lineWidth: VarqLayout.collectionIconBorderWidth
                                     )
                             )
