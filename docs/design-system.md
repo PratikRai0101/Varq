@@ -12,8 +12,12 @@ Rule of thumb: the UI chrome (navigation, buttons, controls) should be as restra
 
 | Token name | Hex (approx) | Usage |
 |---|---|---|
-| `varqIndigo` | `#241F3D` | Primary dark surface — reader chrome background in dark mode, app icon base |
-| `varqIndigoLight` | `#3A3160` | Secondary dark surface, hover/pressed states on indigo |
+| `varqIndigo` | `#241F3D` | Primary surface for the Indigo dark appearance; reader chrome background and app icon base |
+| `varqIndigoLight` | `#3A3160` | Secondary surface, hover/pressed states in the Indigo appearance |
+| `varqBlack` | `#000000` | Primary surface for the Black and Monochrome dark appearances |
+| `varqBlackSurface` | `#121212` | Elevated surface for the Black appearance; brand accents remain visible |
+| `varqMonochromeSurface` | `#1C1C1E` | Elevated surface for the Monochrome appearance |
+| `varqMonochromeInk` | `#F5F5F7` | Primary text and sole UI accent for the Monochrome appearance |
 | `varqParchment` | `#F5EFE3` | Light mode background — never pure white |
 | `varqParchmentDeep` | `#EDE4D0` | Card surfaces in light mode |
 | `varqSepia` | `#F0E6D2` | Reader page background (both modes) — deliberately warmer than UI chrome |
@@ -52,15 +56,17 @@ Do not introduce new colors outside this table without updating this file first.
 ## Settings / preferences
 
 - Preferences use a centered top icon-tab strip (General, Reading, Library, Advanced), followed by generously spaced section cards. This should feel like a focused native macOS preferences window, not a dense system `Form`.
-- In light mode, cards use `varqParchmentDeep` on `varqParchment`; in dark mode, use `varqIndigoLight` on `varqIndigo`. Active tabs use the same restrained surfaces with a subtle `varqSaffron` outline.
+- Appearance choices are System, Light, Indigo, Black, and Monochrome. Indigo uses `varqIndigoLight` on `varqIndigo`; Black uses `varqBlackSurface` on `varqBlack` while retaining brand accents; Monochrome uses `varqMonochromeSurface` on `varqBlack` with only grayscale UI accents. Active tabs use the selected appearance’s restrained surface and accent.
 - Settings must be functional. Do not add controls for deferred features (such as cloud sync or reading goals) merely to fill the layout; use useful local preferences and defaults instead.
 
 ## Light / dark / sepia modes
 
 Varq has three reading-relevant states, not just two:
 1. **Light (library & UI):** `varqParchment` background, dark text, full color palette visible
-2. **Dark (library & UI):** `varqIndigo` background, `varqSaffron`/light text, muted secondary colors
-3. **Reading page tone (independent of UI mode):** the actual book page can be set to sepia (`varqSepia` background, `varqInkLight` text) regardless of whether the surrounding UI chrome is in light or dark mode — this mirrors what serious e-reader users expect (e.g., a sepia reading page at night with dark UI chrome around it) and should be a separate user setting, not tied 1:1 to system light/dark mode.
+2. **Indigo (library & UI):** `varqIndigo` background, `varqSaffron`/light text, muted secondary colors
+3. **Black (library & UI):** `varqBlack` and `varqBlackSurface` backgrounds while retaining Varq accents and highlights
+4. **Monochrome (library & UI):** `varqBlack` and `varqMonochromeSurface` backgrounds with grayscale UI text and accents
+5. **Reading page tone (independent of UI mode):** the actual book page can be set to sepia (`varqSepia` background, `varqInkLight` text) regardless of whether the surrounding UI chrome is in light or dark mode — this mirrors what serious e-reader users expect (e.g., a sepia reading page at night with dark UI chrome around it) and should be a separate user setting, not tied 1:1 to system light/dark mode.
 
 ## Reference mockup
 

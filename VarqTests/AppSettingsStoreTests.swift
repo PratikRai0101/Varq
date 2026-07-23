@@ -20,7 +20,7 @@ struct AppSettingsStoreTests {
             horizontalMargin: 48
         )
         let expected = AppSettings(
-            appearance: .dark,
+            appearance: .indigo,
             showsReadingProgress: false,
             showsPrivateBookBadges: false,
             defaultReadingAppearance: readingAppearance

@@ -5,6 +5,7 @@ import SwiftUI
 struct LibraryView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
     @State private var libraryViewModel = LibraryViewModel()
     @State private var isDropTargeted = false
     @State private var privateBookViewModel = PrivateBookViewModel()
@@ -405,16 +406,16 @@ struct LibraryView: View {
     }
 
     private var libraryForegroundColor: Color {
-        colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight
+        colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight
     }
 
     private var libraryBackgroundColor: Color {
         if isDropTargeted {
             return colorScheme == .dark
-                ? Color.varqIndigoLight.opacity(VarqOpacity.libraryDropTarget)
+                ? darkTheme.surface.opacity(VarqOpacity.libraryDropTarget)
                 : Color.varqParchmentDeep
         }
-        return colorScheme == .dark ? Color.varqIndigo : Color.varqParchment
+        return colorScheme == .dark ? darkTheme.background : Color.varqParchment
     }
 
     private func bookURL(for book: Book) -> URL {

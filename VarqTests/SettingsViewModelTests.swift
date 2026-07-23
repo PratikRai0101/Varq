@@ -17,17 +17,17 @@ struct SettingsViewModelTests {
         readingAppearance.fontFamily = .newYork
         readingAppearance.fontSize = 21
 
-        viewModel.setAppearance(.dark)
+        viewModel.setAppearance(.black)
         viewModel.setShowsReadingProgress(false)
         viewModel.setShowsPrivateBookBadges(false)
         viewModel.setDefaultReadingAppearance(readingAppearance)
 
-        #expect(viewModel.settings.appearance == .dark)
+        #expect(viewModel.settings.appearance == .black)
         #expect(viewModel.settings.showsReadingProgress == false)
         #expect(viewModel.settings.showsPrivateBookBadges == false)
         #expect(viewModel.settings.defaultReadingAppearance == readingAppearance)
         #expect(store.settings == viewModel.settings)
-        #expect(appliedAppearances == [.dark])
+        #expect(appliedAppearances == [.black])
     }
 
     @Test func restoresDefaultsWithoutChangingBookData() {

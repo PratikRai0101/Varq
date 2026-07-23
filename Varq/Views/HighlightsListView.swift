@@ -5,6 +5,7 @@ struct HighlightsListView: View {
     var navigateToHighlight: ((Highlight) -> Void)?
     var deleteHighlight: ((Highlight) async -> Bool)?
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = HighlightsViewModel()
 
@@ -25,16 +26,16 @@ struct HighlightsListView: View {
                                     .frame(width: VarqSpacing.compact, height: VarqSpacing.compact)
                                 Text(highlight.selectedText)
                                     .font(VarqTypography.reading())
-                                    .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
+                                    .foregroundStyle(colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight)
                                 Spacer()
                                 Image(systemName: "arrow.forward")
                                     .font(VarqTypography.ui(.caption))
-                                    .foregroundStyle(colorScheme == .dark ? Color.varqSaffron : Color.varqTerracotta)
+                                    .foregroundStyle(colorScheme == .dark ? darkTheme.accent : Color.varqTerracotta)
                             }
                             if let note = highlight.note {
                                 Text(note)
                                     .font(VarqTypography.ui(.body))
-                                    .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
+                                    .foregroundStyle(colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight)
                             }
                         }
                         .padding(.vertical, VarqSpacing.compact)
@@ -57,7 +58,7 @@ struct HighlightsListView: View {
             }
         }
         .padding(VarqSpacing.regular)
-        .background(colorScheme == .dark ? Color.varqIndigo : Color.varqParchment)
+        .background(colorScheme == .dark ? darkTheme.background : Color.varqParchment)
         .navigationTitle("Highlights")
         .toolbar {
             ToolbarItem(placement: .navigation) {
@@ -71,7 +72,7 @@ struct HighlightsListView: View {
         VStack(spacing: VarqSpacing.regular) {
             Image(systemName: "highlighter")
                 .font(VarqTypography.ui(.largeTitle))
-                .foregroundStyle(Color.varqSaffron)
+                .foregroundStyle(colorScheme == .dark ? darkTheme.accent : Color.varqSaffron)
                 .accessibilityHidden(true)
 
             Text("No highlights yet")
@@ -85,14 +86,14 @@ struct HighlightsListView: View {
         }
         .padding(VarqSpacing.large)
         .frame(maxWidth: VarqLayout.highlightEmptyStateMaximumWidth)
-        .background(colorScheme == .dark ? Color.varqIndigoLight : Color.varqParchmentDeep)
+        .background(colorScheme == .dark ? darkTheme.surface : Color.varqParchmentDeep)
         .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.compact))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
     }
 
     private var primaryTextColor: Color {
-        colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight
+        colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight
     }
 
     private func color(for colorTag: String) -> Color {

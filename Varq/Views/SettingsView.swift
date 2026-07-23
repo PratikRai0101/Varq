@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: SettingsViewModel
     @State private var isRestoreDefaultsConfirmationPresented = false
@@ -26,7 +27,7 @@ struct SettingsView: View {
         .padding(VarqSpacing.large)
         .frame(width: VarqLayout.settingsWindowWidth, height: VarqLayout.settingsWindowHeight)
         .background(backgroundColor)
-        .tint(Color.varqSaffron)
+        .tint(colorScheme == .dark ? darkTheme.accent : Color.varqSaffron)
         .alert("Restore default settings?", isPresented: $isRestoreDefaultsConfirmationPresented) {
             Button("Cancel", role: .cancel) { }
             Button("Restore defaults", role: .destructive) {
@@ -69,7 +70,7 @@ struct SettingsView: View {
             SettingsSection("Appearance") {
                 SettingsRow(
                     title: "App appearance",
-                    detail: "Choose a light, dark, or system-matched interface."
+                    detail: "Choose a light, indigo, black, monochrome, or system-matched interface."
                 ) {
                     Picker("App appearance", selection: appearanceBinding) {
                         ForEach(AppAppearance.allCases, id: \.self) { appearance in
@@ -289,7 +290,7 @@ struct SettingsView: View {
                         isRestoreDefaultsConfirmationPresented = true
                     }
                     .buttonStyle(.bordered)
-                    .tint(Color.varqMaroon)
+                    .tint(colorScheme == .dark ? darkTheme.destructiveAccent : Color.varqMaroon)
                 }
             }
 
@@ -337,16 +338,17 @@ struct SettingsView: View {
     }
 
     private var backgroundColor: Color {
-        colorScheme == .dark ? Color.varqIndigo : Color.varqParchment
+        colorScheme == .dark ? darkTheme.background : Color.varqParchment
     }
 
     private var primaryTextColor: Color {
-        colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight
+        colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight
     }
 }
 
 private struct SettingsTabPicker: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
     @Binding var selectedTab: SettingsViewModel.Tab
 
     var body: some View {
@@ -369,7 +371,7 @@ private struct SettingsTabPicker: View {
                     }
                     .overlay {
                         RoundedRectangle(cornerRadius: VarqSpacing.compact)
-                            .stroke(tab == selectedTab ? Color.varqSaffron.opacity(VarqOpacity.settingsTabBorder) : Color.clear)
+                            .stroke(tab == selectedTab ? (colorScheme == .dark ? darkTheme.accent : Color.varqSaffron).opacity(VarqOpacity.settingsTabBorder) : Color.clear)
                     }
                 }
                 .buttonStyle(.plain)
@@ -379,11 +381,11 @@ private struct SettingsTabPicker: View {
     }
 
     private var selectedBackgroundColor: Color {
-        colorScheme == .dark ? Color.varqIndigoLight : Color.varqParchmentDeep
+        colorScheme == .dark ? darkTheme.surface : Color.varqParchmentDeep
     }
 
     private var primaryTextColor: Color {
-        colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight
+        colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight
     }
 
     private var secondaryTextColor: Color {
@@ -393,6 +395,7 @@ private struct SettingsTabPicker: View {
 
 private struct SettingsSection<Content: View>: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
 
     let title: String
     @ViewBuilder let content: Content
@@ -417,16 +420,17 @@ private struct SettingsSection<Content: View>: View {
     }
 
     private var surfaceColor: Color {
-        colorScheme == .dark ? Color.varqIndigoLight : Color.varqParchmentDeep
+        colorScheme == .dark ? darkTheme.surface : Color.varqParchmentDeep
     }
 
     private var primaryTextColor: Color {
-        colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight
+        colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight
     }
 }
 
 private struct SettingsRow<Control: View>: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
 
     let title: String
     let detail: String
@@ -464,7 +468,7 @@ private struct SettingsRow<Control: View>: View {
     }
 
     private var primaryTextColor: Color {
-        colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight
+        colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight
     }
 
     private var secondaryTextColor: Color {
@@ -474,10 +478,11 @@ private struct SettingsRow<Control: View>: View {
 
 private struct SettingsDivider: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
 
     var body: some View {
         Rectangle()
-            .fill(Color.varqSaffron.opacity(colorScheme == .dark ? VarqOpacity.settingsDividerDark : VarqOpacity.settingsDividerLight))
+            .fill((colorScheme == .dark ? darkTheme.accent : Color.varqSaffron).opacity(colorScheme == .dark ? VarqOpacity.settingsDividerDark : VarqOpacity.settingsDividerLight))
             .frame(height: VarqLayout.settingsDividerHeight)
     }
 }

@@ -7,6 +7,7 @@ struct ReadingNoteEditor: View {
     let cancel: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
     @State private var noteText: String
     @State private var color: HighlightColorTag
 
@@ -59,7 +60,7 @@ struct ReadingNoteEditor: View {
                 .accessibilityLabel("Note text")
                 .scrollContentBackground(.hidden)
                 .padding(VarqSpacing.compact)
-                .background(colorScheme == .dark ? Color.varqIndigoLight : Color.varqParchmentDeep)
+                .background(colorScheme == .dark ? darkTheme.surface : Color.varqParchmentDeep)
 
             HStack {
                 if let note = state.existingNote {
@@ -76,7 +77,7 @@ struct ReadingNoteEditor: View {
             }
         }
         .padding(VarqSpacing.large)
-        .background(colorScheme == .dark ? Color.varqIndigo : Color.varqParchment)
+        .background(colorScheme == .dark ? darkTheme.background : Color.varqParchment)
         .frame(minWidth: VarqLayout.noteEditorMinimumWidth, minHeight: VarqLayout.noteEditorMinimumHeight)
     }
 
@@ -85,6 +86,6 @@ struct ReadingNoteEditor: View {
     }
 
     private var foregroundColor: Color {
-        colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight
+        colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight
     }
 }

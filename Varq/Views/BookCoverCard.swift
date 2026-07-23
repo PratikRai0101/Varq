@@ -3,6 +3,7 @@ import SwiftUI
 
 struct BookCoverCard: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
     @AppStorage(AppSettingsKey.showsReadingProgress) private var showsReadingProgress = true
     @AppStorage(AppSettingsKey.showsPrivateBookBadges) private var showsPrivateBookBadges = true
 
@@ -18,17 +19,17 @@ struct BookCoverCard: View {
             VStack(alignment: .leading, spacing: VarqSpacing.compact) {
                 Text(verbatim: book.title)
                     .font(VarqTypography.uiMedium(.headline))
-                    .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
+                    .foregroundStyle(colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight)
                     .lineLimit(2, reservesSpace: true)
 
                 Text(verbatim: book.author)
                     .font(VarqTypography.ui(.subheadline))
-                    .foregroundStyle(colorScheme == .dark ? Color.varqSaffron : Color.varqTerracotta)
+                    .foregroundStyle(colorScheme == .dark ? darkTheme.accent : Color.varqTerracotta)
                     .lineLimit(1, reservesSpace: true)
 
                 Text("\(Int(progressValue * 100))% complete")
                     .font(VarqTypography.ui(.caption))
-                    .foregroundStyle(Color.varqSaffron)
+                    .foregroundStyle(colorScheme == .dark ? darkTheme.accent : Color.varqSaffron)
                     .lineLimit(1, reservesSpace: true)
                     .opacity(shouldShowReadingProgress ? 1 : 0)
                     .accessibilityHidden(!shouldShowReadingProgress)
@@ -74,9 +75,9 @@ struct BookCoverCard: View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
                 Rectangle()
-                    .fill(Color.varqIndigo.opacity(VarqOpacity.bookProgressTrack))
+                    .fill((colorScheme == .dark ? darkTheme.surface : Color.varqIndigo).opacity(VarqOpacity.bookProgressTrack))
                 Rectangle()
-                    .fill(Color.varqSaffron)
+                    .fill(colorScheme == .dark ? darkTheme.accent : Color.varqSaffron)
                     .frame(width: proxy.size.width * progressValue)
             }
         }
@@ -97,20 +98,20 @@ struct BookCoverCard: View {
                         .frame(width: proxy.size.width, height: proxy.size.height)
                 } else {
                     RoundedRectangle(cornerRadius: VarqSpacing.compact)
-                        .fill(Color.varqIndigo)
+                        .fill(colorScheme == .dark ? darkTheme.background : Color.varqIndigo)
                         .overlay {
                             Image(systemName: "book.closed")
                                 .font(VarqTypography.ui(.largeTitle))
-                                .foregroundStyle(Color.varqSaffron)
+                                .foregroundStyle(colorScheme == .dark ? darkTheme.accent : Color.varqSaffron)
                         }
                 }
 
                 if book.isPrivate && showsPrivateBookBadges {
                     Image(systemName: "lock.fill")
                         .font(VarqTypography.ui(.caption))
-                        .foregroundStyle(Color.varqSaffron)
+                        .foregroundStyle(colorScheme == .dark ? darkTheme.accent : Color.varqSaffron)
                         .padding(VarqSpacing.compact)
-                        .background(Color.varqIndigo.opacity(VarqOpacity.privateBookBadgeBackground))
+                        .background((colorScheme == .dark ? darkTheme.background : Color.varqIndigo).opacity(VarqOpacity.privateBookBadgeBackground))
                         .clipShape(Circle())
                         .padding(VarqSpacing.compact)
                 }

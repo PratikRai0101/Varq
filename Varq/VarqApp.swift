@@ -11,6 +11,7 @@ import SwiftData
 @main
 struct VarqApp: App {
     @NSApplicationDelegateAdaptor(VarqAppDelegate.self) var appDelegate
+    @AppStorage(AppSettingsKey.appearance) private var appearanceRawValue = AppAppearance.system.rawValue
 
     let importViewModel: ImportViewModel
     let managedLibraryDirectory: URL
@@ -54,7 +55,19 @@ struct VarqApp: App {
                 importViewModel: importViewModel,
                 managedLibraryDirectory: managedLibraryDirectory
             )
+            .environment(\.varqDarkTheme, darkTheme)
         }
         .modelContainer(sharedModelContainer)
+    }
+
+    private var darkTheme: VarqDarkTheme {
+        switch AppAppearance(rawValue: appearanceRawValue) ?? .system {
+        case .black:
+            .black
+        case .monochrome:
+            .monochrome
+        case .system, .light, .indigo:
+            .indigo
+        }
     }
 }

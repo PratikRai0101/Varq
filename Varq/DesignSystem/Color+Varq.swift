@@ -2,6 +2,10 @@ import SwiftUI
 
 enum VarqWebColor {
     static let indigo = "#241F3D"
+    static let black = "#000000"
+    static let blackSurface = "#121212"
+    static let monochromeSurface = "#1C1C1E"
+    static let monochromeInk = "#F5F5F7"
     static let parchment = "#F5EFE3"
     static let sepia = "#F0E6D2"
     static let inkLight = "#2E2717"
@@ -18,6 +22,10 @@ enum VarqWebColor {
 extension Color {
     static let varqIndigo = Color(red: 36.0 / 255.0, green: 31.0 / 255.0, blue: 61.0 / 255.0)
     static let varqIndigoLight = Color(red: 58.0 / 255.0, green: 49.0 / 255.0, blue: 96.0 / 255.0)
+    static let varqBlack = Color.black
+    static let varqBlackSurface = Color(red: 18.0 / 255.0, green: 18.0 / 255.0, blue: 18.0 / 255.0)
+    static let varqMonochromeSurface = Color(red: 28.0 / 255.0, green: 28.0 / 255.0, blue: 30.0 / 255.0)
+    static let varqMonochromeInk = Color(red: 245.0 / 255.0, green: 245.0 / 255.0, blue: 247.0 / 255.0)
     static let varqParchment = Color(red: 245.0 / 255.0, green: 239.0 / 255.0, blue: 227.0 / 255.0)
     static let varqParchmentDeep = Color(red: 237.0 / 255.0, green: 228.0 / 255.0, blue: 208.0 / 255.0)
     static let varqSepia = Color(red: 240.0 / 255.0, green: 230.0 / 255.0, blue: 210.0 / 255.0)

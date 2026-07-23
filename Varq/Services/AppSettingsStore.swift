@@ -23,13 +23,17 @@ struct AppSettings: Equatable, Sendable {
 enum AppAppearance: String, CaseIterable, Sendable {
     case system
     case light
-    case dark
+    case indigo = "dark"
+    case black
+    case monochrome
 
     var displayName: String {
         switch self {
         case .system: "System"
         case .light: "Light"
-        case .dark: "Dark"
+        case .indigo: "Indigo"
+        case .black: "Black"
+        case .monochrome: "Mono"
         }
     }
 }

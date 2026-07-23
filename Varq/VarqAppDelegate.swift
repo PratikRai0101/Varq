@@ -20,7 +20,7 @@ extension AppAppearance {
         switch appearance {
         case .light:
             NSApp.appearance = NSAppearance(named: .aqua)
-        case .dark:
+        case .indigo, .black, .monochrome:
             NSApp.appearance = NSAppearance(named: .darkAqua)
         case .system:
             NSApp.appearance = nil

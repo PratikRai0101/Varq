@@ -4,6 +4,7 @@ import SwiftUI
 struct ReaderView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.varqDarkTheme) private var darkTheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var isReaderFocused: Bool
     @State private var viewModel: ReaderViewModel
@@ -19,7 +20,7 @@ struct ReaderView: View {
 
     var body: some View {
         ZStack {
-            Color.varqIndigo
+            darkTheme.background
 
             NativeRendererView(rendererView: viewModel.rendererView)
                 .padding(VarqSpacing.regular)
