@@ -4,7 +4,7 @@ struct HighlightCreationControls: View {
     let createHighlight: (HighlightColorTag) -> Void
 
     var body: some View {
-        Menu("Highlight selection", systemImage: "paintpalette") {
+        Menu("Highlight selection", systemImage: "highlighter") {
             ForEach(HighlightColorTag.allCases, id: \.self) { color in
                 Button {
                     createHighlight(color)
