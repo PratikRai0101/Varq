@@ -16,11 +16,20 @@ nonisolated enum AIAssistantUnavailableReason: Equatable, Sendable {
 }
 
 /// A reader-selected operation that produces a non-authoritative reading aid.
-nonisolated enum ReadingAidKind: Sendable {
+nonisolated enum ReadingAidKind: Equatable, Sendable {
     case explain
     case simplify
     case summarize
     case discussionQuestions
+
+    var displayName: String {
+        switch self {
+        case .explain: "Explain"
+        case .simplify: "Simplify"
+        case .summarize: "Summarize"
+        case .discussionQuestions: "Discussion questions"
+        }
+    }
 }
 
 /// Text explicitly selected by a reader, limited to a size suitable for an on-device request.
@@ -56,17 +65,17 @@ nonisolated enum AIAssistantServiceError: Error, Equatable, Sendable {
 }
 
 /// A seam for checking system-model availability without coupling callers to Foundation Models.
-protocol AIAssistantAvailabilityProviding: Sendable {
+nonisolated protocol AIAssistantAvailabilityProviding: Sendable {
     func availability() -> AIAssistantAvailability
 }
 
 /// A seam for generating text without exposing Foundation Models to callers or tests.
-protocol AIAssistantResponding: Sendable {
+nonisolated protocol AIAssistantResponding: Sendable {
     func respond(to prompt: String) async throws -> String
 }
 
 /// The system Foundation Models availability adapter.
-struct SystemAIAssistantAvailabilityProvider: AIAssistantAvailabilityProviding {
+nonisolated struct SystemAIAssistantAvailabilityProvider: AIAssistantAvailabilityProviding {
     func availability() -> AIAssistantAvailability {
         guard #available(macOS 26.0, *) else {
             return .unavailable(.unsupportedOS)
@@ -87,7 +96,7 @@ struct SystemAIAssistantAvailabilityProvider: AIAssistantAvailabilityProviding {
     }
 }
 
-struct SystemAIAssistantResponder: AIAssistantResponding {
+nonisolated struct SystemAIAssistantResponder: AIAssistantResponding {
     func respond(to prompt: String) async throws -> String {
         guard #available(macOS 26.0, *) else {
             throw AIAssistantServiceError.unavailable(.unsupportedOS)
@@ -104,7 +113,7 @@ struct SystemAIAssistantResponder: AIAssistantResponding {
 }
 
 /// The entry point for future on-device, bounded-context reading aids.
-struct AIAssistantService {
+nonisolated struct AIAssistantService {
     private let availabilityProvider: any AIAssistantAvailabilityProviding
     private let responder: any AIAssistantResponding
 

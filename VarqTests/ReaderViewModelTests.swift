@@ -145,6 +145,69 @@ struct ReaderViewModelTests {
         #expect(renderer.renderedHighlightIDs == [[highlight.id]])
     }
 
+    @Test func generatesAReadingAidFromTheCurrentSelection() async throws {
+        let locator = try epubLocator(progression: 0)
+        let anchor = try TextHighlightAnchor(
+            locator: locator,
+            startOffset: 0,
+            endOffset: 8,
+            quote: TextQuoteSelector(exact: "A passage")
+        )
+        let renderer = FakeBookRenderer(locator: locator, selectedAnchor: anchor)
+        let responder = ReaderTestAIAssistantResponder(response: "An explanation")
+        let assistant = AIAssistantService(
+            availabilityProvider: ReaderTestAIAssistantAvailabilityProvider(.available),
+            responder: responder
+        )
+        let viewModel = ReaderViewModel(
+            book: book(),
+            bookURL: bookURL,
+            renderer: renderer,
+            initialReadingAppearance: ReadingAppearance(),
+            privateBookSessionService: PrivateBookSessionService(),
+            aiAssistantService: assistant
+        )
+
+        await viewModel.requestReadingAid(.explain)
+
+        #expect(viewModel.generatedReadingAid?.kind == .explain)
+        #expect(viewModel.generatedReadingAid?.text == "An explanation")
+        #expect(await responder.prompts.count == 1)
+    }
+
+    @Test func requestsConsentBeforeGeneratingForAPrivateBook() async throws {
+        let locator = try epubLocator(progression: 0)
+        let anchor = try TextHighlightAnchor(
+            locator: locator,
+            startOffset: 0,
+            endOffset: 8,
+            quote: TextQuoteSelector(exact: "A passage")
+        )
+        let privateBook = book()
+        privateBook.isPrivate = true
+        let renderer = FakeBookRenderer(locator: locator, selectedAnchor: anchor)
+        let responder = ReaderTestAIAssistantResponder(response: "An explanation")
+        let assistant = AIAssistantService(
+            availabilityProvider: ReaderTestAIAssistantAvailabilityProvider(.available),
+            responder: responder
+        )
+        let viewModel = ReaderViewModel(
+            book: privateBook,
+            bookURL: bookURL,
+            renderer: renderer,
+            initialReadingAppearance: ReadingAppearance(),
+            privateBookSessionService: PrivateBookSessionService(),
+            aiAssistantService: assistant,
+            intelligenceConsentService: ReadingIntelligenceConsentService(store: ReaderTestConsentStore())
+        )
+
+        await viewModel.requestReadingAid(.summarize)
+
+        #expect(viewModel.isPrivateBookIntelligenceConsentPresented)
+        #expect(viewModel.generatedReadingAid == nil)
+        #expect(await responder.prompts.isEmpty)
+    }
+
     @Test func createsAndRendersAPageNote() async throws {
         let locator = try epubLocator(progression: 0)
         let renderer = FakeBookRenderer(locator: locator)
@@ -419,6 +482,49 @@ private final class ReaderTestSettingsStore: AppSettingsStoring {
 
     func reset() {
         settings = AppSettings()
+    }
+}
+
+private struct ReaderTestAIAssistantAvailabilityProvider: AIAssistantAvailabilityProviding {
+    let availabilityValue: AIAssistantAvailability
+
+    init(_ availabilityValue: AIAssistantAvailability) {
+        self.availabilityValue = availabilityValue
+    }
+
+    func availability() -> AIAssistantAvailability {
+        availabilityValue
+    }
+}
+
+private actor ReaderTestAIAssistantResponder: AIAssistantResponding {
+    private(set) var prompts: [String] = []
+    let response: String
+
+    init(response: String) {
+        self.response = response
+    }
+
+    func respond(to prompt: String) async throws -> String {
+        prompts.append(prompt)
+        return response
+    }
+}
+
+@MainActor
+private final class ReaderTestConsentStore: LocalIntelligenceConsentStoring {
+    private var approvedBookIDs: Set<UUID> = []
+
+    func hasConsent(for bookID: UUID) -> Bool {
+        approvedBookIDs.contains(bookID)
+    }
+
+    func grantConsent(for bookID: UUID) {
+        approvedBookIDs.insert(bookID)
+    }
+
+    func revokeConsent(for bookID: UUID) {
+        approvedBookIDs.remove(bookID)
     }
 }
 

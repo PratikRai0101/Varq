@@ -101,6 +101,16 @@ struct ReaderView: View {
                 }
 
                 ToolbarItem {
+                    ReadingAssistantControls(
+                        availability: viewModel.localIntelligenceAvailability,
+                        isGenerating: viewModel.isGeneratingReadingAid,
+                        requestAid: { kind in
+                            Task { await viewModel.requestReadingAid(kind) }
+                        }
+                    )
+                }
+
+                ToolbarItem {
                     Button("Add page note", systemImage: "note.text.badge.plus") {
                         viewModel.beginPageNote()
                     }
@@ -162,6 +172,29 @@ struct ReaderView: View {
                 Button("Close reader", systemImage: "xmark", action: dismiss.callAsFunction)
             }
         }
+        .alert(
+            "Use local intelligence with this private book?",
+            isPresented: privateBookIntelligenceConsentBinding
+        ) {
+            Button("Not now", role: .cancel, action: viewModel.cancelPrivateBookIntelligenceConsent)
+            Button("Continue") {
+                Task { await viewModel.grantPrivateBookIntelligenceConsent() }
+            }
+        } message: {
+            Text("Varq will process the selected text on this Mac. This permission applies only to this private book and can be revoked later.")
+        }
+        .sheet(
+            item: Binding(
+                get: { viewModel.generatedReadingAid },
+                set: { result in
+                    if result == nil {
+                        viewModel.dismissGeneratedReadingAid()
+                    }
+                }
+            )
+        ) { result in
+            GeneratedReadingAidView(result: result, dismiss: viewModel.dismissGeneratedReadingAid)
+        }
         .sheet(
             item: Binding(
                 get: { viewModel.noteEditorState },
@@ -183,6 +216,17 @@ struct ReaderView: View {
                 cancel: viewModel.cancelNoteEditing
             )
         }
+    }
+
+    private var privateBookIntelligenceConsentBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.isPrivateBookIntelligenceConsentPresented },
+            set: { isPresented in
+                if !isPresented {
+                    viewModel.cancelPrivateBookIntelligenceConsent()
+                }
+            }
+        )
     }
 
     private func performPageTurn(_ direction: PageTurnDirection) {

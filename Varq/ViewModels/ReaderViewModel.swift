@@ -3,6 +3,12 @@ import Foundation
 import Observation
 import SwiftData
 
+struct GeneratedReadingAidResult: Identifiable, Equatable {
+    let id = UUID()
+    let kind: ReadingAidKind
+    let text: String
+}
+
 @MainActor
 @Observable
 final class ReaderViewModel {
@@ -10,11 +16,17 @@ final class ReaderViewModel {
     private let book: Book
     private let bookURL: URL
     private let privateBookSessionService: PrivateBookSessionService
+    private let aiAssistantService: AIAssistantService
+    private let intelligenceConsentService: ReadingIntelligenceConsentService
+    private var pendingReadingAidKind: ReadingAidKind?
     private var modelContext: ModelContext?
 
     private(set) var currentLocator: BookLocator?
     private(set) var readingAppearance: ReadingAppearance
     private(set) var noteEditorState: NoteEditorState?
+    private(set) var generatedReadingAid: GeneratedReadingAidResult?
+    private(set) var isPrivateBookIntelligenceConsentPresented = false
+    private(set) var isGeneratingReadingAid = false
     private(set) var errorMessage: String?
     var rendererView: NSView { renderer.view }
     var highlightedBook: Book { book }
@@ -28,7 +40,9 @@ final class ReaderViewModel {
             bookURL: bookURL,
             renderer: renderer,
             settingsStore: UserDefaultsAppSettingsStore(),
-            privateBookSessionService: PrivateBookSessionService()
+            privateBookSessionService: PrivateBookSessionService(),
+            aiAssistantService: AIAssistantService(),
+            intelligenceConsentService: ReadingIntelligenceConsentService()
         )
     }
 
@@ -37,14 +51,18 @@ final class ReaderViewModel {
         bookURL: URL,
         renderer: some BookRenderer,
         settingsStore: any AppSettingsStoring,
-        privateBookSessionService: PrivateBookSessionService
+        privateBookSessionService: PrivateBookSessionService,
+        aiAssistantService: AIAssistantService = AIAssistantService(),
+        intelligenceConsentService: ReadingIntelligenceConsentService? = nil
     ) {
         self.init(
             book: book,
             bookURL: bookURL,
             renderer: renderer,
             initialReadingAppearance: settingsStore.load().defaultReadingAppearance,
-            privateBookSessionService: privateBookSessionService
+            privateBookSessionService: privateBookSessionService,
+            aiAssistantService: aiAssistantService,
+            intelligenceConsentService: intelligenceConsentService ?? ReadingIntelligenceConsentService()
         )
     }
 
@@ -53,13 +71,17 @@ final class ReaderViewModel {
         bookURL: URL,
         renderer: some BookRenderer,
         initialReadingAppearance: ReadingAppearance,
-        privateBookSessionService: PrivateBookSessionService
+        privateBookSessionService: PrivateBookSessionService,
+        aiAssistantService: AIAssistantService = AIAssistantService(),
+        intelligenceConsentService: ReadingIntelligenceConsentService? = nil
     ) {
         self.book = book
         self.bookURL = bookURL
         self.renderer = renderer
         self.readingAppearance = initialReadingAppearance
         self.privateBookSessionService = privateBookSessionService
+        self.aiAssistantService = aiAssistantService
+        self.intelligenceConsentService = intelligenceConsentService ?? ReadingIntelligenceConsentService()
 
         if let interactionRenderer = renderer as? any ReaderAnnotationInteractionProviding {
             interactionRenderer.setAnnotationActionHandler { [weak self] action in
@@ -174,6 +196,38 @@ final class ReaderViewModel {
         }
     }
 
+    var localIntelligenceAvailability: AIAssistantAvailability {
+        aiAssistantService.availability
+    }
+
+    func requestReadingAid(_ kind: ReadingAidKind) async {
+        guard case .allowed = intelligenceConsentService.access(for: book) else {
+            pendingReadingAidKind = kind
+            isPrivateBookIntelligenceConsentPresented = true
+            return
+        }
+        await generateReadingAid(kind)
+    }
+
+    func grantPrivateBookIntelligenceConsent() async {
+        intelligenceConsentService.grantLocalIntelligenceConsent(for: book)
+        isPrivateBookIntelligenceConsentPresented = false
+        guard let pendingReadingAidKind else {
+            return
+        }
+        self.pendingReadingAidKind = nil
+        await generateReadingAid(pendingReadingAidKind)
+    }
+
+    func cancelPrivateBookIntelligenceConsent() {
+        pendingReadingAidKind = nil
+        isPrivateBookIntelligenceConsentPresented = false
+    }
+
+    func dismissGeneratedReadingAid() {
+        generatedReadingAid = nil
+    }
+
     func beginPageNote() {
         guard let locator = renderer.currentLocator else {
             return
@@ -271,6 +325,48 @@ final class ReaderViewModel {
         await renderer.close()
         privateBookSessionService.closeSession()
         currentLocator = nil
+    }
+
+    private func generateReadingAid(_ kind: ReadingAidKind) async {
+        guard let selectionRenderer = renderer as? any TextSelectionProviding else {
+            errorMessage = "Reading aids are unavailable for this book format."
+            return
+        }
+
+        do {
+            guard let anchor = try await selectionRenderer.selectedTextHighlightAnchor() else {
+                errorMessage = "Select text before using a reading aid."
+                return
+            }
+            let context = try BoundedReadingContext(selectedText: anchor.quote.exact)
+            isGeneratingReadingAid = true
+            defer { isGeneratingReadingAid = false }
+            let aid = try await aiAssistantService.generate(kind, using: context)
+            generatedReadingAid = GeneratedReadingAidResult(kind: kind, text: aid.text)
+            errorMessage = nil
+        } catch let error as AIAssistantServiceError {
+            switch error {
+            case let .unavailable(reason):
+                errorMessage = intelligenceUnavailableMessage(for: reason)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func intelligenceUnavailableMessage(for reason: AIAssistantUnavailableReason) -> String {
+        switch reason {
+        case .unsupportedOS:
+            "Reading aids require macOS 26 or later."
+        case .deviceNotEligible:
+            "Reading aids require a Mac that supports Apple Intelligence."
+        case .appleIntelligenceDisabled:
+            "Turn on Apple Intelligence in System Settings to use reading aids."
+        case .modelNotReady:
+            "Apple Intelligence is still preparing. Try again shortly."
+        case .unavailable:
+            "Reading aids are unavailable right now."
+        }
     }
 
     private func updateReadingAppearance(_ appearance: ReadingAppearance) async {
