@@ -1,6 +1,6 @@
 # Varq
 
-A native, open-source e-reader for macOS. Built in Swift/SwiftUI with native macOS reader components — no Electron, no web wrappers. Reads EPUB, PDF, CBZ, and CBR. Designed with a warm, distinct visual identity rather than generic minimalism.
+A native, open-source e-reader for macOS. Built in Swift/SwiftUI with native macOS reader components — no Electron, no web wrappers. Reads EPUB, PDF, and CBZ. Designed with a warm, distinct visual identity rather than generic minimalism.
 
 ## Why
 

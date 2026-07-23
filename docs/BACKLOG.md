@@ -68,7 +68,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 ## Phase 9 — Polish & pre-submission
 - [x] Full pass against `docs/design-system.md` — flag any screen that doesn't match the reference mockup's warmth/restraint balance
 - [x] Accessibility pass (VoiceOver labels, reduceMotion fallback for page-turn animation, Dynamic Type where applicable)
-- [ ] App Store screenshots and listing copy
+- [x] App Store screenshots and listing copy
 - [ ] TestFlight distribution to 5–10 real users
 - [ ] Address TestFlight feedback
 - [ ] Submit for App Store review
