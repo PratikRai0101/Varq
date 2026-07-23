@@ -2,12 +2,12 @@ import Foundation
 import FoundationModels
 
 /// Reports whether Varq can offer on-device reading aids on the current Mac.
-enum AIAssistantAvailability: Equatable, Sendable {
+nonisolated enum AIAssistantAvailability: Equatable, Sendable {
     case available
     case unavailable(AIAssistantUnavailableReason)
 }
 
-enum AIAssistantUnavailableReason: Equatable, Sendable {
+nonisolated enum AIAssistantUnavailableReason: Equatable, Sendable {
     case unsupportedOS
     case deviceNotEligible
     case appleIntelligenceDisabled
@@ -15,9 +15,54 @@ enum AIAssistantUnavailableReason: Equatable, Sendable {
     case unavailable
 }
 
+/// A reader-selected operation that produces a non-authoritative reading aid.
+nonisolated enum ReadingAidKind: Sendable {
+    case explain
+    case simplify
+    case summarize
+    case discussionQuestions
+}
+
+/// Text explicitly selected by a reader, limited to a size suitable for an on-device request.
+nonisolated struct BoundedReadingContext: Sendable {
+    static let maximumCharacterCount = 12_000
+
+    let selectedText: String
+
+    init(selectedText: String) throws {
+        let trimmedText = selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else {
+            throw BoundedReadingContextError.empty
+        }
+        guard trimmedText.count <= Self.maximumCharacterCount else {
+            throw BoundedReadingContextError.exceedsMaximumLength
+        }
+        self.selectedText = trimmedText
+    }
+}
+
+nonisolated enum BoundedReadingContextError: Error, Equatable, Sendable {
+    case empty
+    case exceedsMaximumLength
+}
+
+/// A generated response that is not persisted unless the reader explicitly saves it.
+nonisolated struct GeneratedReadingAid: Equatable, Sendable {
+    let text: String
+}
+
+nonisolated enum AIAssistantServiceError: Error, Equatable, Sendable {
+    case unavailable(AIAssistantUnavailableReason)
+}
+
 /// A seam for checking system-model availability without coupling callers to Foundation Models.
 protocol AIAssistantAvailabilityProviding: Sendable {
     func availability() -> AIAssistantAvailability
+}
+
+/// A seam for generating text without exposing Foundation Models to callers or tests.
+protocol AIAssistantResponding: Sendable {
+    func respond(to prompt: String) async throws -> String
 }
 
 /// The system Foundation Models availability adapter.
@@ -42,15 +87,71 @@ struct SystemAIAssistantAvailabilityProvider: AIAssistantAvailabilityProviding {
     }
 }
 
+struct SystemAIAssistantResponder: AIAssistantResponding {
+    func respond(to prompt: String) async throws -> String {
+        guard #available(macOS 26.0, *) else {
+            throw AIAssistantServiceError.unavailable(.unsupportedOS)
+        }
+        return try await respondOnSupportedSystem(to: prompt)
+    }
+
+    @available(macOS 26.0, *)
+    private func respondOnSupportedSystem(to prompt: String) async throws -> String {
+        let session = LanguageModelSession()
+        let response = try await session.respond(to: prompt)
+        return response.content
+    }
+}
+
 /// The entry point for future on-device, bounded-context reading aids.
 struct AIAssistantService {
     private let availabilityProvider: any AIAssistantAvailabilityProviding
+    private let responder: any AIAssistantResponding
 
-    init(availabilityProvider: any AIAssistantAvailabilityProviding = SystemAIAssistantAvailabilityProvider()) {
+    init(
+        availabilityProvider: any AIAssistantAvailabilityProviding = SystemAIAssistantAvailabilityProvider(),
+        responder: any AIAssistantResponding = SystemAIAssistantResponder()
+    ) {
         self.availabilityProvider = availabilityProvider
+        self.responder = responder
     }
 
     var availability: AIAssistantAvailability {
         availabilityProvider.availability()
+    }
+
+    func generate(
+        _ kind: ReadingAidKind,
+        using context: BoundedReadingContext
+    ) async throws -> GeneratedReadingAid {
+        guard case .available = availability else {
+            if case .unavailable(let reason) = availability {
+                throw AIAssistantServiceError.unavailable(reason)
+            }
+            throw AIAssistantServiceError.unavailable(.unavailable)
+        }
+
+        return GeneratedReadingAid(text: try await responder.respond(to: prompt(for: kind, context: context)))
+    }
+
+    private func prompt(for kind: ReadingAidKind, context: BoundedReadingContext) -> String {
+        let instruction: String
+        switch kind {
+        case .explain:
+            instruction = "Explain the selected passage in clear, concise language."
+        case .simplify:
+            instruction = "Rewrite the selected passage in simpler language while preserving its meaning."
+        case .summarize:
+            instruction = "Summarize the selected passage concisely."
+        case .discussionQuestions:
+            instruction = "Write thoughtful discussion questions about the selected passage."
+        }
+
+        return """
+        \(instruction) Use only the passage below. If the passage does not contain enough information, say so rather than inventing details.
+
+        Selected passage:
+        \(context.selectedText)
+        """
     }
 }

@@ -78,7 +78,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 See `docs/ROADMAP.md` for the approved release sequence and `docs/adr/0009-keep-private-content-local-by-default.md` for the private-content policy.
 
 - [x] Add an `AIAssistantService` availability seam with macOS 26 handling and a deterministic test adapter
-- [ ] Implement bounded reading-context requests in `AIAssistantService`
+- [x] Implement bounded reading-context requests in `AIAssistantService`
 - [ ] Enforce private-content consent policy at intelligence, index, and export destinations
 - [ ] Add selected-passage explain, simplify, summarize, and discussion-question aids
 - [ ] Add EPUB chapter recap with evaluation coverage
