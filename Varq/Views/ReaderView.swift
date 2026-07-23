@@ -99,6 +99,11 @@ struct ReaderView: View {
             )
         }
         .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button("Home", systemImage: "house", action: dismiss.callAsFunction)
+                    .accessibilityHint("Return to your library")
+            }
+
             if viewModel.supportsTextHighlights {
                 ToolbarItem {
                     Button("Highlights", systemImage: "list.bullet") {
