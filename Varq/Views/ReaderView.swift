@@ -14,6 +14,8 @@ struct ReaderView: View {
     @State private var isTurningPage = false
     @State private var isHighlightsPresented = false
     @State private var isTableOfContentsPresented = false
+    @State private var isAssistantSidebarPresented = false
+    private let assistantCompletionService = ReadingAssistantCompletionService()
 
     init(book: Book, bookURL: URL, renderer: some BookRenderer) {
         _viewModel = State(initialValue: ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer))
@@ -31,21 +33,19 @@ struct ReaderView: View {
                 PageTurnOverlay(direction: pageTurnDirection, progress: pageTurnProgress)
             }
 
-            if let kind = viewModel.readingAidInProgress {
-                Color.varqInkLight
-                    .opacity(VarqOpacity.pageTurnOverlay)
-                    .ignoresSafeArea()
-                ReadingAssistantProgressView(kind: kind)
-                    .transition(.opacity)
-            }
-
-            if let result = viewModel.generatedReadingAid {
+            if isAssistantSidebarPresented, let kind = viewModel.readingAidInProgress {
+                HStack {
+                    Spacer()
+                    ReadingAssistantProgressView(kind: kind)
+                }
+                .padding(VarqSpacing.large)
+            } else if isAssistantSidebarPresented, let result = viewModel.generatedReadingAid {
                 HStack {
                     Spacer()
                     GeneratedReadingAidPanel(
                         result: result,
                         saveAsNote: viewModel.saveGeneratedReadingAidAsNote,
-                        dismiss: viewModel.dismissGeneratedReadingAid
+                        dismiss: { isAssistantSidebarPresented = false }
                     )
                 }
                 .padding(VarqSpacing.large)
@@ -139,6 +139,13 @@ struct ReaderView: View {
                 }
 
                 ToolbarItem {
+                    Button("Show assistant", systemImage: "sidebar.right") {
+                        isAssistantSidebarPresented.toggle()
+                    }
+                    .help("Show or hide the reading assistant")
+                }
+
+                ToolbarItem {
                     Button("Add page note", systemImage: "note.text.badge.plus") {
                         viewModel.beginPageNote()
                     }
@@ -216,6 +223,14 @@ struct ReaderView: View {
             ToolbarItem(placement: .primaryAction) {
                 Button("Close reader", systemImage: "xmark", action: dismiss.callAsFunction)
             }
+        }
+        .onChange(of: viewModel.readingAidInProgress) { _, kind in
+            if kind != nil { isAssistantSidebarPresented = true }
+        }
+        .onChange(of: viewModel.generatedReadingAid) { _, result in
+            guard let result else { return }
+            isAssistantSidebarPresented = true
+            assistantCompletionService.announceCompletion(title: "\(result.kind.displayName) is ready")
         }
         .sheet(isPresented: $isTableOfContentsPresented) {
             TableOfContentsView(
