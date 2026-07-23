@@ -21,6 +21,7 @@ nonisolated enum ReadingAidKind: Equatable, Sendable {
     case simplify
     case summarize
     case discussionQuestions
+    case chapterRecap
 
     var displayName: String {
         switch self {
@@ -28,6 +29,7 @@ nonisolated enum ReadingAidKind: Equatable, Sendable {
         case .simplify: "Simplify"
         case .summarize: "Summarize"
         case .discussionQuestions: "Discussion questions"
+        case .chapterRecap: "Chapter recap"
         }
     }
 }
@@ -154,12 +156,14 @@ nonisolated struct AIAssistantService {
             instruction = "Summarize the selected passage concisely."
         case .discussionQuestions:
             instruction = "Write up to five thoughtful discussion questions about the selected passage as a numbered list."
+        case .chapterRecap:
+            instruction = "Write a short recap of this chapter, followed by key ideas and up to three reflection questions."
         }
 
         return """
         \(instruction) Use only the passage below. If the passage does not contain enough information, say so rather than inventing details. Respond in plain text and do not use Markdown.
 
-        Selected passage:
+        Reading context:
         \(context.selectedText)
         """
     }

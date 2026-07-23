@@ -33,7 +33,7 @@ struct AIAssistantServiceTests {
             """
             Explain the selected passage in clear, concise language. Use only the passage below. If the passage does not contain enough information, say so rather than inventing details. Respond in plain text and do not use Markdown.
 
-            Selected passage:
+            Reading context:
             The moon reflected on the river.
             """
         ])

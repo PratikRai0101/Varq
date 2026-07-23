@@ -3,7 +3,7 @@ import Foundation
 import WebKit
 
 @MainActor
-final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, ReaderAnnotationInteractionProviding, WKNavigationDelegate {
+final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, ChapterTextProviding, ReaderAnnotationInteractionProviding, WKNavigationDelegate {
     private let webView: WKWebView
     private let publicationService: EpubPublicationService
     private let sessionRootDirectory: URL
@@ -130,6 +130,14 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Rea
             endOffset: selection.endOffset,
             quote: TextQuoteSelector(exact: selection.exact, prefix: selection.prefix, suffix: selection.suffix)
         )
+    }
+
+    func currentChapterText() async throws -> String? {
+        let result = try await evaluate(script: "document.body.innerText || ''")
+        guard let text = result as? String else {
+            return nil
+        }
+        return text
     }
 
     private func configureContextMenu() {

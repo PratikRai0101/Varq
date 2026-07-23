@@ -195,6 +195,29 @@ struct ReaderViewModelTests {
         #expect(await responder.prompts.count == 1)
     }
 
+    @Test func generatesAChapterRecapFromTheCurrentEpubChapter() async throws {
+        let locator = try epubLocator(progression: 0)
+        let renderer = FakeBookRenderer(locator: locator, chapterText: "Chapter text")
+        let assistant = AIAssistantService(
+            availabilityProvider: ReaderTestAIAssistantAvailabilityProvider(.available),
+            responder: ReaderTestAIAssistantResponder(response: "Chapter recap")
+        )
+        let viewModel = ReaderViewModel(
+            book: book(),
+            bookURL: bookURL,
+            renderer: renderer,
+            initialReadingAppearance: ReadingAppearance(),
+            privateBookSessionService: PrivateBookSessionService(),
+            aiAssistantService: assistant
+        )
+        await viewModel.open()
+
+        await viewModel.requestChapterRecap()
+
+        #expect(viewModel.generatedReadingAid?.kind == .chapterRecap)
+        #expect(viewModel.generatedReadingAid?.text == "Chapter recap")
+    }
+
     @Test func opensANoteEditorWithTheGeneratedReadingAid() async throws {
         let locator = try epubLocator(progression: 0)
         let anchor = try TextHighlightAnchor(
@@ -579,13 +602,14 @@ private final class ReaderTestConsentStore: LocalIntelligenceConsentStoring {
 }
 
 @MainActor
-private final class FakeBookRenderer: BookRenderer, TextSelectionProviding, ReaderAnnotationInteractionProviding {
+private final class FakeBookRenderer: BookRenderer, TextSelectionProviding, ChapterTextProviding, ReaderAnnotationInteractionProviding {
     let view = NSView()
     let supportedFormat: BookFormat = .epub
     private let initialLocator: BookLocator
     private let reportedProgressFraction: Double?
     private let advancedLocator: BookLocator?
     private let selectedAnchor: TextHighlightAnchor?
+    private let chapterText: String?
     private var annotationActionHandler: ((ReaderAnnotationAction) -> Void)?
     private var noteActivationHandler: ((UUID) -> Void)?
 
@@ -602,11 +626,13 @@ private final class FakeBookRenderer: BookRenderer, TextSelectionProviding, Read
         locator: BookLocator,
         advancedLocator: BookLocator? = nil,
         selectedAnchor: TextHighlightAnchor? = nil,
+        chapterText: String? = nil,
         reportedProgressFraction: Double? = nil
     ) {
         initialLocator = locator
         self.advancedLocator = advancedLocator
         self.selectedAnchor = selectedAnchor
+        self.chapterText = chapterText
         self.reportedProgressFraction = reportedProgressFraction
     }
 
@@ -621,6 +647,10 @@ private final class FakeBookRenderer: BookRenderer, TextSelectionProviding, Read
 
     func selectedTextHighlightAnchor() async throws -> TextHighlightAnchor? {
         selectedAnchor
+    }
+
+    func currentChapterText() async throws -> String? {
+        chapterText
     }
 
     func setAnnotationActionHandler(_ handler: @escaping (ReaderAnnotationAction) -> Void) {

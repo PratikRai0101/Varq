@@ -132,6 +132,13 @@ struct ReaderView: View {
 
             if viewModel.supportsEpubLayoutControls {
                 ToolbarItem {
+                    Button("Recap chapter", systemImage: "text.append") {
+                        Task { await viewModel.requestChapterRecap() }
+                    }
+                    .disabled(viewModel.isGeneratingReadingAid)
+                }
+
+                ToolbarItem {
                     EpubLayoutControls(
                         pageLayout: viewModel.readingAppearance.epubPageLayout,
                         setPageLayout: { pageLayout in

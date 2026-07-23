@@ -7,7 +7,7 @@ struct GeneratedReadingAidResult: Identifiable, Equatable {
     let id = UUID()
     let kind: ReadingAidKind
     let text: String
-    let anchor: TextHighlightAnchor
+    let noteAnchor: ReadingNoteAnchor
 }
 
 @MainActor
@@ -20,6 +20,7 @@ final class ReaderViewModel {
     private let aiAssistantService: AIAssistantService
     private let intelligenceConsentService: ReadingIntelligenceConsentService
     private var pendingReadingAidKind: ReadingAidKind?
+    private var isChapterRecapPendingConsent = false
     private var modelContext: ModelContext?
 
     private(set) var currentLocator: BookLocator?
@@ -213,6 +214,15 @@ final class ReaderViewModel {
         intelligenceUnavailableReason = nil
     }
 
+    func requestChapterRecap() async {
+        guard case .allowed = intelligenceConsentService.access(for: book) else {
+            isChapterRecapPendingConsent = true
+            isPrivateBookIntelligenceConsentPresented = true
+            return
+        }
+        await generateChapterRecap()
+    }
+
     func requestReadingAid(_ kind: ReadingAidKind) async {
         guard case .allowed = intelligenceConsentService.access(for: book) else {
             pendingReadingAidKind = kind
@@ -229,11 +239,17 @@ final class ReaderViewModel {
             return
         }
         self.pendingReadingAidKind = nil
-        await generateReadingAid(pendingReadingAidKind)
+        if isChapterRecapPendingConsent {
+            isChapterRecapPendingConsent = false
+            await generateChapterRecap()
+        } else {
+            await generateReadingAid(pendingReadingAidKind)
+        }
     }
 
     func cancelPrivateBookIntelligenceConsent() {
         pendingReadingAidKind = nil
+        isChapterRecapPendingConsent = false
         isPrivateBookIntelligenceConsentPresented = false
     }
 
@@ -246,7 +262,7 @@ final class ReaderViewModel {
             return
         }
         noteEditorState = NoteEditorState(
-            anchor: ReadingNoteAnchor(textSelection: generatedReadingAid.anchor),
+            anchor: generatedReadingAid.noteAnchor,
             initialBody: generatedReadingAid.text
         )
         self.generatedReadingAid = nil
@@ -351,6 +367,40 @@ final class ReaderViewModel {
         currentLocator = nil
     }
 
+    private func generateChapterRecap() async {
+        guard let chapterProvider = renderer as? any ChapterTextProviding else {
+            errorMessage = "Chapter recaps are available for EPUB books."
+            return
+        }
+        do {
+            guard let text = try await chapterProvider.currentChapterText() else {
+                errorMessage = "Varq could not read this chapter."
+                return
+            }
+            let context = try BoundedReadingContext(selectedText: text)
+            isGeneratingReadingAid = true
+            defer { isGeneratingReadingAid = false }
+            let aid = try await aiAssistantService.generate(.chapterRecap, using: context)
+            guard let locator = renderer.currentLocator else {
+                return
+            }
+            generatedReadingAid = GeneratedReadingAidResult(
+                kind: .chapterRecap,
+                text: aid.text,
+                noteAnchor: ReadingNoteAnchor(pageLocator: locator)
+            )
+            errorMessage = nil
+        } catch is BoundedReadingContextError {
+            errorMessage = "This chapter is too long to recap on-device."
+        } catch let error as AIAssistantServiceError {
+            if case .unavailable(let reason) = error {
+                intelligenceUnavailableReason = reason
+            }
+        } catch {
+            errorMessage = "Varq could not recap this chapter."
+        }
+    }
+
     private func generateReadingAid(_ kind: ReadingAidKind) async {
         guard let selectionRenderer = renderer as? any TextSelectionProviding else {
             errorMessage = "Reading aids are unavailable for this book format."
@@ -366,7 +416,11 @@ final class ReaderViewModel {
             isGeneratingReadingAid = true
             defer { isGeneratingReadingAid = false }
             let aid = try await aiAssistantService.generate(kind, using: context)
-            generatedReadingAid = GeneratedReadingAidResult(kind: kind, text: aid.text, anchor: anchor)
+            generatedReadingAid = GeneratedReadingAidResult(
+                kind: kind,
+                text: aid.text,
+                noteAnchor: ReadingNoteAnchor(textSelection: anchor)
+            )
             errorMessage = nil
         } catch let error as AIAssistantServiceError {
             switch error {
