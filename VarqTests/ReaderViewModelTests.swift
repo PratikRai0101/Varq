@@ -195,6 +195,21 @@ struct ReaderViewModelTests {
         #expect(await responder.prompts.count == 1)
     }
 
+    @Test func loadsTheEpubTableOfContents() async throws {
+        let locator = try epubLocator(progression: 0)
+        let viewModel = ReaderViewModel(
+            book: book(),
+            bookURL: bookURL,
+            renderer: FakeBookRenderer(locator: locator),
+            initialReadingAppearance: ReadingAppearance(),
+            privateBookSessionService: PrivateBookSessionService()
+        )
+
+        await viewModel.loadTableOfContents()
+
+        #expect(viewModel.tableOfContents.map(\.title) == ["Chapter 1"])
+    }
+
     @Test func generatesAChapterRecapFromTheCurrentEpubChapter() async throws {
         let locator = try epubLocator(progression: 0)
         let renderer = FakeBookRenderer(locator: locator, chapterText: "Chapter text")
@@ -602,7 +617,7 @@ private final class ReaderTestConsentStore: LocalIntelligenceConsentStoring {
 }
 
 @MainActor
-private final class FakeBookRenderer: BookRenderer, TextSelectionProviding, ChapterTextProviding, ReaderAnnotationInteractionProviding {
+private final class FakeBookRenderer: BookRenderer, TextSelectionProviding, ChapterTextProviding, TableOfContentsProviding, ReaderAnnotationInteractionProviding {
     let view = NSView()
     let supportedFormat: BookFormat = .epub
     private let initialLocator: BookLocator
@@ -651,6 +666,11 @@ private final class FakeBookRenderer: BookRenderer, TextSelectionProviding, Chap
 
     func currentChapterText() async throws -> String? {
         chapterText
+    }
+
+    func tableOfContents() async throws -> [ReaderTableOfContentsEntry] {
+        let locator = currentLocator ?? initialLocator
+        return [ReaderTableOfContentsEntry(id: 0, title: "Chapter 1", locator: locator)]
     }
 
     func setAnnotationActionHandler(_ handler: @escaping (ReaderAnnotationAction) -> Void) {

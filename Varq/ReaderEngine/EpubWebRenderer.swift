@@ -3,7 +3,7 @@ import Foundation
 import WebKit
 
 @MainActor
-final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, ChapterTextProviding, ReaderAnnotationInteractionProviding, WKNavigationDelegate {
+final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, ChapterTextProviding, TableOfContentsProviding, ReaderAnnotationInteractionProviding, WKNavigationDelegate {
     private let webView: WKWebView
     private let publicationService: EpubPublicationService
     private let sessionRootDirectory: URL
@@ -132,12 +132,57 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
         )
     }
 
+    func tableOfContents() async throws -> [ReaderTableOfContentsEntry] {
+        guard let publication else {
+            return []
+        }
+        return publication.spine.enumerated().compactMap { index, resource in
+            guard let locator = try? BookLocator(
+                format: .epub,
+                spineIndex: index,
+                resourceHref: resource.href,
+                progression: 0
+            ) else {
+                return nil
+            }
+            return ReaderTableOfContentsEntry(
+                id: index,
+                title: chapterTitle(for: resource, index: index),
+                locator: locator
+            )
+        }
+    }
+
     func currentChapterText() async throws -> String? {
         let result = try await evaluate(script: "document.body.innerText || ''")
         guard let text = result as? String else {
             return nil
         }
         return text
+    }
+
+    private func chapterTitle(for resource: EpubSpineResource, index: Int) -> String {
+        if let markup = try? String(contentsOf: resource.fileURL, encoding: .utf8),
+           let expression = try? NSRegularExpression(
+                pattern: "<(?:title|h1)[^>]*>(.*?)</(?:title|h1)>",
+                options: [.caseInsensitive, .dotMatchesLineSeparators]
+           ),
+           let match = expression.firstMatch(
+                in: markup,
+                range: NSRange(markup.startIndex..., in: markup)
+           ),
+           let range = Range(match.range(at: 1), in: markup) {
+            let title = markup[range]
+                .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !title.isEmpty {
+                return title
+            }
+        }
+
+        let filename = URL(fileURLWithPath: resource.href).deletingPathExtension().lastPathComponent
+        let readableFilename = filename.replacingOccurrences(of: "-", with: " ")
+        return readableFilename.isEmpty ? "Chapter \(index + 1)" : readableFilename
     }
 
     private func configureContextMenu() {

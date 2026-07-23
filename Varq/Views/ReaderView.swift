@@ -13,6 +13,7 @@ struct ReaderView: View {
     @State private var readerOpacity = 1.0
     @State private var isTurningPage = false
     @State private var isHighlightsPresented = false
+    @State private var isTableOfContentsPresented = false
 
     init(book: Book, bookURL: URL, renderer: some BookRenderer) {
         _viewModel = State(initialValue: ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer))
@@ -137,6 +138,13 @@ struct ReaderView: View {
 
             if viewModel.supportsEpubLayoutControls {
                 ToolbarItem {
+                    Button("Contents", systemImage: "list.bullet") {
+                        Task { await viewModel.loadTableOfContents() }
+                        isTableOfContentsPresented = true
+                    }
+                }
+
+                ToolbarItem {
                     Button("Recap chapter", systemImage: "text.append") {
                         Task { await viewModel.requestChapterRecap() }
                     }
@@ -196,6 +204,15 @@ struct ReaderView: View {
             ToolbarItem(placement: .primaryAction) {
                 Button("Close reader", systemImage: "xmark", action: dismiss.callAsFunction)
             }
+        }
+        .sheet(isPresented: $isTableOfContentsPresented) {
+            TableOfContentsView(
+                entries: viewModel.tableOfContents,
+                selectEntry: { entry in
+                    Task { await viewModel.navigateToTableOfContentsEntry(entry) }
+                    isTableOfContentsPresented = false
+                }
+            )
         }
         .alert(
             "Reading aids unavailable",

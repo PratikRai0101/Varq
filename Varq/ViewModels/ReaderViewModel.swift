@@ -24,6 +24,7 @@ final class ReaderViewModel {
     private var modelContext: ModelContext?
 
     private(set) var currentLocator: BookLocator?
+    private(set) var tableOfContents: [ReaderTableOfContentsEntry] = []
     private(set) var readingAppearance: ReadingAppearance
     private(set) var noteEditorState: NoteEditorState?
     private(set) var generatedReadingAid: GeneratedReadingAidResult?
@@ -111,6 +112,27 @@ final class ReaderViewModel {
             await renderer.renderHighlights(book.highlights)
             await renderer.renderNotes(book.notes)
             errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func loadTableOfContents() async {
+        guard let contentsProvider = renderer as? any TableOfContentsProviding else {
+            return
+        }
+        do {
+            tableOfContents = try await contentsProvider.tableOfContents()
+        } catch {
+            errorMessage = "Varq could not load this book’s contents."
+        }
+    }
+
+    func navigateToTableOfContentsEntry(_ entry: ReaderTableOfContentsEntry) async {
+        do {
+            try await renderer.go(to: entry.locator)
+            currentLocator = renderer.currentLocator
+            persistCurrentLocator()
         } catch {
             errorMessage = error.localizedDescription
         }
