@@ -106,7 +106,8 @@ struct ReaderView: View {
                         isGenerating: viewModel.isGeneratingReadingAid,
                         requestAid: { kind in
                             Task { await viewModel.requestReadingAid(kind) }
-                        }
+                        },
+                        showUnavailableMessage: viewModel.presentIntelligenceUnavailableMessage
                     )
                 }
 
@@ -173,6 +174,14 @@ struct ReaderView: View {
             }
         }
         .alert(
+            "Reading aids unavailable",
+            isPresented: intelligenceUnavailableBinding
+        ) {
+            Button("OK", action: viewModel.dismissIntelligenceUnavailableMessage)
+        } message: {
+            Text(intelligenceUnavailableMessage)
+        }
+        .alert(
             "Use local intelligence with this private book?",
             isPresented: privateBookIntelligenceConsentBinding
         ) {
@@ -215,6 +224,32 @@ struct ReaderView: View {
                 },
                 cancel: viewModel.cancelNoteEditing
             )
+        }
+    }
+
+    private var intelligenceUnavailableBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.intelligenceUnavailableReason != nil },
+            set: { isPresented in
+                if !isPresented {
+                    viewModel.dismissIntelligenceUnavailableMessage()
+                }
+            }
+        )
+    }
+
+    private var intelligenceUnavailableMessage: String {
+        switch viewModel.intelligenceUnavailableReason {
+        case .unsupportedOS:
+            "Reading aids require macOS 26 or later."
+        case .deviceNotEligible:
+            "Reading aids require a Mac that supports Apple Intelligence."
+        case .appleIntelligenceDisabled:
+            "Turn on Apple Intelligence in System Settings, then reopen Varq."
+        case .modelNotReady:
+            "Apple Intelligence is still preparing. Try again shortly."
+        case .unavailable, nil:
+            "Reading aids are unavailable right now."
         }
     }
 

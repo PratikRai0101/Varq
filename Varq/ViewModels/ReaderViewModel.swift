@@ -25,6 +25,7 @@ final class ReaderViewModel {
     private(set) var readingAppearance: ReadingAppearance
     private(set) var noteEditorState: NoteEditorState?
     private(set) var generatedReadingAid: GeneratedReadingAidResult?
+    private(set) var intelligenceUnavailableReason: AIAssistantUnavailableReason?
     private(set) var isPrivateBookIntelligenceConsentPresented = false
     private(set) var isGeneratingReadingAid = false
     private(set) var errorMessage: String?
@@ -198,6 +199,17 @@ final class ReaderViewModel {
 
     var localIntelligenceAvailability: AIAssistantAvailability {
         aiAssistantService.availability
+    }
+
+    func presentIntelligenceUnavailableMessage() {
+        guard case .unavailable(let reason) = localIntelligenceAvailability else {
+            return
+        }
+        intelligenceUnavailableReason = reason
+    }
+
+    func dismissIntelligenceUnavailableMessage() {
+        intelligenceUnavailableReason = nil
     }
 
     func requestReadingAid(_ kind: ReadingAidKind) async {

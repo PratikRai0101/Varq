@@ -4,16 +4,23 @@ struct ReadingAssistantControls: View {
     let availability: AIAssistantAvailability
     let isGenerating: Bool
     let requestAid: (ReadingAidKind) -> Void
+    let showUnavailableMessage: () -> Void
 
     var body: some View {
-        Menu("Reading aids", systemImage: "sparkles") {
-            ForEach(aidKinds, id: \.self) { kind in
-                Button(kind.displayName) {
-                    requestAid(kind)
+        Group {
+            if isAvailable {
+                Menu("Reading aids", systemImage: "sparkles") {
+                    ForEach(aidKinds, id: \.self) { kind in
+                        Button(kind.displayName) {
+                            requestAid(kind)
+                        }
+                    }
                 }
+                .disabled(isGenerating)
+            } else {
+                Button("Reading aids unavailable", systemImage: "sparkles", action: showUnavailableMessage)
             }
         }
-        .disabled(isGenerating || !isAvailable)
         .accessibilityHint(accessibilityHint)
         .overlay {
             if isGenerating {

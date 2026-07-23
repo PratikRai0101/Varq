@@ -119,6 +119,26 @@ struct ReaderViewModelTests {
         #expect(renderer.updatedAppearance == viewModel.readingAppearance)
     }
 
+    @Test func publishesWhyReadingAidsAreUnavailable() throws {
+        let locator = try epubLocator(progression: 0)
+        let assistant = AIAssistantService(
+            availabilityProvider: ReaderTestAIAssistantAvailabilityProvider(.unavailable(.appleIntelligenceDisabled)),
+            responder: ReaderTestAIAssistantResponder(response: "Unused")
+        )
+        let viewModel = ReaderViewModel(
+            book: book(),
+            bookURL: bookURL,
+            renderer: FakeBookRenderer(locator: locator),
+            initialReadingAppearance: ReadingAppearance(),
+            privateBookSessionService: PrivateBookSessionService(),
+            aiAssistantService: assistant
+        )
+
+        viewModel.presentIntelligenceUnavailableMessage()
+
+        #expect(viewModel.intelligenceUnavailableReason == .appleIntelligenceDisabled)
+    }
+
     @Test func createsAPersistedHighlightFromTheRendererSelection() async throws {
         let locator = try epubLocator(progression: 0)
         let anchor = try TextHighlightAnchor(
