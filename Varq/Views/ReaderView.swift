@@ -107,7 +107,7 @@ struct ReaderView: View {
 
             if viewModel.supportsTextHighlights {
                 ToolbarItem {
-                    Button("Highlights", systemImage: "list.bullet") {
+                    Button("Highlights", systemImage: "highlighter") {
                         isHighlightsPresented = true
                     }
                 }
@@ -138,7 +138,7 @@ struct ReaderView: View {
 
             if viewModel.supportsEpubLayoutControls {
                 ToolbarItem {
-                    Button("Contents", systemImage: "list.bullet") {
+                    Button("Contents", systemImage: "text.justify.leading") {
                         Task { await viewModel.loadTableOfContents() }
                         isTableOfContentsPresented = true
                     }

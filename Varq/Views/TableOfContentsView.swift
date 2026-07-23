@@ -2,6 +2,8 @@ import SwiftUI
 
 struct TableOfContentsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
 
     let entries: [ReaderTableOfContentsEntry]
     let selectEntry: (ReaderTableOfContentsEntry) -> Void
@@ -12,8 +14,10 @@ struct TableOfContentsView: View {
                 Button(entry.title) {
                     selectEntry(entry)
                 }
-                .foregroundStyle(Color.varqInkDark)
+                .foregroundStyle(colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight)
             }
+            .scrollContentBackground(.hidden)
+            .background(colorScheme == .dark ? darkTheme.background : Color.varqParchment)
             .navigationTitle("Contents")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

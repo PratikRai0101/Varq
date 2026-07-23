@@ -83,6 +83,9 @@ struct HighlightsListView: View {
                 .font(VarqTypography.ui(.body))
                 .foregroundStyle(primaryTextColor.opacity(VarqOpacity.secondaryText))
                 .multilineTextAlignment(.center)
+
+            Button("Back to reader", systemImage: "chevron.backward", action: dismiss.callAsFunction)
+                .buttonStyle(.bordered)
         }
         .padding(VarqSpacing.large)
         .frame(maxWidth: VarqLayout.highlightEmptyStateMaximumWidth)
