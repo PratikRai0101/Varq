@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct ReadingAssistantControls: View {
@@ -60,6 +61,8 @@ struct GeneratedReadingAidPanel: View {
     let saveAsNote: () -> Void
     let dismiss: () -> Void
 
+    @State private var hasCopiedResponse = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: VarqSpacing.regular) {
             HStack(alignment: .firstTextBaseline, spacing: VarqSpacing.compact) {
@@ -95,6 +98,9 @@ struct GeneratedReadingAidPanel: View {
             .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.compact))
 
             HStack {
+                Button(copyButtonTitle, systemImage: copyButtonSymbol, action: copyResponse)
+                    .buttonStyle(.bordered)
+
                 Button("Save as note", systemImage: "note.text.badge.plus", action: saveAsNote)
                     .buttonStyle(.bordered)
 
@@ -116,6 +122,21 @@ struct GeneratedReadingAidPanel: View {
                 .stroke(accentColor.opacity(VarqOpacity.settingsTabBorder))
         }
         .accessibilityElement(children: .contain)
+    }
+
+    private var copyButtonTitle: String {
+        hasCopiedResponse ? "Copied" : "Copy"
+    }
+
+    private var copyButtonSymbol: String {
+        hasCopiedResponse ? "checkmark" : "doc.on.doc"
+    }
+
+    private func copyResponse() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(plainText, forType: .string)
+        hasCopiedResponse = true
     }
 
     private var plainText: String {
