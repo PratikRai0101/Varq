@@ -54,6 +54,25 @@ struct ReadingAssistantControls: View {
     }
 }
 
+struct ReadingAssistantEmptyView: View {
+    var body: some View {
+        VStack(spacing: VarqSpacing.regular) {
+            Image(systemName: "sparkles")
+                .font(VarqTypography.ui(.largeTitle))
+                .foregroundStyle(Color.varqSaffron)
+            Text("Reading assistant")
+                .font(VarqTypography.uiMedium(.title2))
+                .foregroundStyle(Color.varqInkLight)
+            Text("Select text, then choose Explain, Simplify, Summarize, or Discussion questions from the sparkle menu.")
+                .font(VarqTypography.ui(.body))
+                .foregroundStyle(Color.varqInkLight.opacity(VarqOpacity.secondaryText))
+                .multilineTextAlignment(.center)
+        }
+        .padding(VarqSpacing.large)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct ReadingAssistantProgressView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.varqDarkTheme) private var darkTheme

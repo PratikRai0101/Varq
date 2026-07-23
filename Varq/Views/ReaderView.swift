@@ -33,22 +33,8 @@ struct ReaderView: View {
                 PageTurnOverlay(direction: pageTurnDirection, progress: pageTurnProgress)
             }
 
-            if isAssistantSidebarPresented, let kind = viewModel.readingAidInProgress {
-                HStack {
-                    Spacer()
-                    ReadingAssistantProgressView(kind: kind)
-                }
-                .padding(VarqSpacing.large)
-            } else if isAssistantSidebarPresented, let result = viewModel.generatedReadingAid {
-                HStack {
-                    Spacer()
-                    GeneratedReadingAidPanel(
-                        result: result,
-                        saveAsNote: viewModel.saveGeneratedReadingAidAsNote,
-                        dismiss: { isAssistantSidebarPresented = false }
-                    )
-                }
-                .padding(VarqSpacing.large)
+            if isAssistantSidebarPresented {
+                assistantSidebar
             }
 
             if let errorMessage = viewModel.errorMessage {
@@ -281,6 +267,28 @@ struct ReaderView: View {
                 cancel: viewModel.cancelNoteEditing
             )
         }
+    }
+
+    @ViewBuilder
+    private var assistantSidebar: some View {
+        HStack(spacing: 0) {
+            Spacer()
+            if let kind = viewModel.readingAidInProgress {
+                ReadingAssistantProgressView(kind: kind)
+            } else if let result = viewModel.generatedReadingAid {
+                GeneratedReadingAidPanel(
+                    result: result,
+                    saveAsNote: viewModel.saveGeneratedReadingAidAsNote,
+                    dismiss: { isAssistantSidebarPresented = false }
+                )
+            } else {
+                ReadingAssistantEmptyView()
+            }
+        }
+        .frame(maxHeight: .infinity)
+        .frame(width: VarqLayout.readingAidPanelWidth, alignment: .trailing)
+        .background(Color.varqParchment)
+        .padding(VarqSpacing.regular)
     }
 
     private var intelligenceUnavailableBinding: Binding<Bool> {
