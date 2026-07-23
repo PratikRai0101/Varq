@@ -107,9 +107,10 @@ struct ReaderView: View {
 
             if viewModel.supportsTextHighlights {
                 ToolbarItem {
-                    Button("Highlights", systemImage: "highlighter") {
+                    Button("Highlights", systemImage: "bookmark") {
                         isHighlightsPresented = true
                     }
+                    .help("Browse saved highlights and notes")
                 }
 
                 ToolbarItem {
@@ -133,15 +134,17 @@ struct ReaderView: View {
                     Button("Add page note", systemImage: "note.text.badge.plus") {
                         viewModel.beginPageNote()
                     }
+                    .help("Add a note at this page")
                 }
             }
 
             if viewModel.supportsEpubLayoutControls {
                 ToolbarItem {
-                    Button("Contents", systemImage: "text.justify.leading") {
+                    Button("Contents", systemImage: "list.bullet") {
                         Task { await viewModel.loadTableOfContents() }
                         isTableOfContentsPresented = true
                     }
+                    .help("Browse the book’s table of contents")
                 }
 
                 ToolbarItem {
@@ -149,6 +152,7 @@ struct ReaderView: View {
                         Task { await viewModel.requestChapterRecap() }
                     }
                     .disabled(viewModel.isGeneratingReadingAid)
+                    .help("Generate a recap of this chapter")
                 }
 
                 ToolbarItem {

@@ -4,7 +4,7 @@ struct HighlightCreationControls: View {
     let createHighlight: (HighlightColorTag) -> Void
 
     var body: some View {
-        Menu("Highlight selection", systemImage: "highlighter") {
+        Menu("Highlight selection", systemImage: "paintpalette") {
             ForEach(HighlightColorTag.allCases, id: \.self) { color in
                 Button {
                     createHighlight(color)
@@ -19,6 +19,7 @@ struct HighlightCreationControls: View {
             }
         }
         .accessibilityHint("Select text in the reader, then choose a highlight color.")
+        .help("Highlight selected text")
     }
 
     private func swatchColor(for color: HighlightColorTag) -> Color {

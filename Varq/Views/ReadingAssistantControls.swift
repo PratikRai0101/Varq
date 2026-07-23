@@ -23,6 +23,7 @@ struct ReadingAssistantControls: View {
             }
         }
         .accessibilityHint(accessibilityHint)
+        .help("Create an on-device reading aid from selected text")
         .overlay {
             if isGenerating {
                 ProgressView()
