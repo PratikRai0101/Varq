@@ -11,7 +11,7 @@ struct HighlightsListView: View {
     var body: some View {
         Group {
             if viewModel.highlights.isEmpty {
-                ContentUnavailableView("No highlights yet", systemImage: "highlighter", description: Text("Select text in the reader to save a highlight."))
+                highlightEmptyState
             } else {
                 List(viewModel.highlights, id: \.id) { highlight in
                     Button {
@@ -64,6 +64,34 @@ struct HighlightsListView: View {
             }
         }
         .task { viewModel.load(for: book) }
+    }
+
+    private var highlightEmptyState: some View {
+        VStack(spacing: VarqSpacing.regular) {
+            Image(systemName: "highlighter")
+                .font(VarqTypography.ui(.largeTitle))
+                .foregroundStyle(Color.varqSaffron)
+                .accessibilityHidden(true)
+
+            Text("No highlights yet")
+                .font(VarqTypography.uiMedium(.title2))
+                .foregroundStyle(primaryTextColor)
+
+            Text("Select text in the reader to save a highlight.")
+                .font(VarqTypography.ui(.body))
+                .foregroundStyle(primaryTextColor.opacity(VarqOpacity.secondaryText))
+                .multilineTextAlignment(.center)
+        }
+        .padding(VarqSpacing.large)
+        .frame(maxWidth: VarqLayout.highlightEmptyStateMaximumWidth)
+        .background(colorScheme == .dark ? Color.varqIndigoLight : Color.varqParchmentDeep)
+        .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.compact))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var primaryTextColor: Color {
+        colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight
     }
 
     private func color(for colorTag: String) -> Color {

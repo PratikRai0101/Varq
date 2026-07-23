@@ -25,6 +25,12 @@ enum VarqLayout {
     static let settingsControlMaximumWidth: CGFloat = 240
     static let settingsContentMaximumWidth: CGFloat = 640
     static let settingsDividerHeight: CGFloat = 1
+    static let collectionEditorWidth: CGFloat = 420
+    static let collectionEditorHeight: CGFloat = 440
+    static let collectionIconSize: CGFloat = 40
+    static let collectionIconColumns = 5
+    static let collectionIconBorderWidth: CGFloat = 1.5
+    static let highlightEmptyStateMaximumWidth: CGFloat = 360
 }
 
 enum VarqMotion {
@@ -41,6 +47,11 @@ enum VarqOpacity {
     static let settingsSecondaryText = 0.72
     static let settingsDividerLight = 0.24
     static let settingsDividerDark = 0.32
+    static let libraryDropTarget = 0.85
+    static let bookProgressTrack = 0.5
+    static let privateBookBadgeBackground = 0.72
+    static let selectedCollectionIcon = 0.2
+    static let secondaryText = 0.72
 }
 
 enum VarqTypography {

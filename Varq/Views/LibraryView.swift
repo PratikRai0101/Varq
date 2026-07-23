@@ -95,15 +95,22 @@ struct LibraryView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(editingCollection == nil ? "New Collection" : "Edit Collection")
-                    .font(.headline)
+                    .font(VarqTypography.uiMedium(.headline))
+                    .foregroundStyle(libraryForegroundColor)
                 Spacer()
                 Button("Cancel") { cancelCollectionEditor() }
                 Button("Save") { saveCollectionEditor() }
                     .disabled(collectionEditorName.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            .padding()
+            .padding(VarqSpacing.regular)
 
-            Divider()
+            Rectangle()
+                .fill(
+                    Color.varqSaffron.opacity(
+                        colorScheme == .dark ? VarqOpacity.settingsDividerDark : VarqOpacity.settingsDividerLight
+                    )
+                )
+                .frame(height: VarqLayout.settingsDividerHeight)
 
             Form {
                 TextField("Name", text: $collectionEditorName)
@@ -113,8 +120,11 @@ struct LibraryView: View {
                 }
             }
             .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
         }
-        .frame(width: 420, height: 440)
+        .tint(Color.varqSaffron)
+        .frame(width: VarqLayout.collectionEditorWidth, height: VarqLayout.collectionEditorHeight)
+        .background(libraryBackgroundColor)
     }
 
     private func startEditing(_ collection: BookCollection) {
@@ -166,7 +176,11 @@ struct LibraryView: View {
                         libraryViewModel.selectedCollection = collection
                     } label: {
                         Label(collection.name, systemImage: collection.symbolName ?? "folder")
-                            .foregroundStyle(libraryViewModel.selectedCollection?.id == collection.id ? Color.accentColor : Color.primary)
+                            .foregroundStyle(
+                                libraryViewModel.selectedCollection?.id == collection.id
+                                    ? Color.varqSaffron
+                                    : libraryForegroundColor
+                            )
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
@@ -201,6 +215,7 @@ struct LibraryView: View {
                 }
             }
         }
+        .tint(Color.varqSaffron)
         .navigationSplitViewColumnWidth(
             min: VarqLayout.sidebarMinimumWidth,
             ideal: VarqLayout.sidebarIdealWidth,
@@ -229,8 +244,9 @@ struct LibraryView: View {
             }
         }
         .padding(VarqSpacing.large)
-        .foregroundStyle(colorScheme == .dark ? Color.white : Color.varqInkLight)
-        .background(isDropTargeted ? (colorScheme == .dark ? Color.black.opacity(0.85) : Color.varqParchmentDeep) : (colorScheme == .dark ? Color.black : Color.varqParchment))
+        .foregroundStyle(libraryForegroundColor)
+        .background(libraryBackgroundColor)
+        .tint(Color.varqSaffron)
         .navigationTitle(libraryViewModel.selectedCollection?.name ?? "Library")
         .toolbar {
             ToolbarItem {
@@ -268,11 +284,11 @@ struct LibraryView: View {
 
             Text("No books in \(libraryViewModel.selectedCollection?.name ?? "this collection")")
                 .font(VarqTypography.uiMedium(.title2))
-                .foregroundStyle(Color.varqInkDark)
+                .foregroundStyle(libraryForegroundColor)
 
             Text("Books that match this collection will appear here.")
                 .font(VarqTypography.ui(.body))
-                .foregroundStyle(Color.varqParchmentDeep)
+                .foregroundStyle(libraryForegroundColor.opacity(VarqOpacity.secondaryText))
                 .multilineTextAlignment(.center)
         }
         .padding(VarqSpacing.large)
@@ -388,6 +404,19 @@ struct LibraryView: View {
         }
     }
 
+    private var libraryForegroundColor: Color {
+        colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight
+    }
+
+    private var libraryBackgroundColor: Color {
+        if isDropTargeted {
+            return colorScheme == .dark
+                ? Color.varqIndigoLight.opacity(VarqOpacity.libraryDropTarget)
+                : Color.varqParchmentDeep
+        }
+        return colorScheme == .dark ? Color.varqIndigo : Color.varqParchment
+    }
+
     private func bookURL(for book: Book) -> URL {
         managedLibraryDirectory.appendingPathComponent(book.libraryRelativePath)
     }
@@ -485,6 +514,7 @@ struct LibraryView: View {
 }
 
 private struct CollectionIconPicker: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var selectedIcon: String
 
     private let iconOptions: [String] = [
@@ -497,23 +527,30 @@ private struct CollectionIconPicker: View {
         "character.book.closed",
     ]
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+    private let columns = Array(
+        repeating: GridItem(.flexible(), spacing: VarqSpacing.compact),
+        count: VarqLayout.collectionIconColumns
+    )
 
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: 8) {
+            LazyVGrid(columns: columns, spacing: VarqSpacing.compact) {
                 ForEach(iconOptions, id: \.self) { icon in
                     Button {
                         selectedIcon = icon
                     } label: {
                         Image(systemName: icon)
-                            .font(.title3)
-                            .frame(width: 40, height: 40)
-                            .background(selectedIcon == icon ? Color.accentColor.opacity(0.2) : Color.clear)
-                            .cornerRadius(6)
+                            .font(VarqTypography.ui(.title3))
+                            .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
+                            .frame(width: VarqLayout.collectionIconSize, height: VarqLayout.collectionIconSize)
+                            .background(selectedIcon == icon ? Color.varqSaffron.opacity(VarqOpacity.selectedCollectionIcon) : Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.compact))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(selectedIcon == icon ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                                RoundedRectangle(cornerRadius: VarqSpacing.compact)
+                                    .stroke(
+                                        selectedIcon == icon ? Color.varqSaffron : Color.clear,
+                                        lineWidth: VarqLayout.collectionIconBorderWidth
+                                    )
                             )
                     }
                     .buttonStyle(.plain)

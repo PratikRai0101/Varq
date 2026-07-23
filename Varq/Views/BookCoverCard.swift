@@ -18,7 +18,7 @@ struct BookCoverCard: View {
             VStack(alignment: .leading, spacing: VarqSpacing.compact) {
                 Text(verbatim: book.title)
                     .font(VarqTypography.uiMedium(.headline))
-                    .foregroundStyle(colorScheme == .dark ? Color.white : Color.varqInkLight)
+                    .foregroundStyle(colorScheme == .dark ? Color.varqInkDark : Color.varqInkLight)
                     .lineLimit(2, reservesSpace: true)
 
                 Text(verbatim: book.author)
@@ -55,7 +55,7 @@ struct BookCoverCard: View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
                 Rectangle()
-                    .fill(Color.varqIndigo.opacity(0.5))
+                    .fill(Color.varqIndigo.opacity(VarqOpacity.bookProgressTrack))
                 Rectangle()
                     .fill(Color.varqSaffron)
                     .frame(width: proxy.size.width * progressValue)
@@ -91,7 +91,7 @@ struct BookCoverCard: View {
                         .font(VarqTypography.ui(.caption))
                         .foregroundStyle(Color.varqSaffron)
                         .padding(VarqSpacing.compact)
-                        .background(Color.varqIndigo.opacity(0.72))
+                        .background(Color.varqIndigo.opacity(VarqOpacity.privateBookBadgeBackground))
                         .clipShape(Circle())
                         .padding(VarqSpacing.compact)
                 }
