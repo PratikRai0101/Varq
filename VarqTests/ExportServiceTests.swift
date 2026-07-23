@@ -8,7 +8,7 @@ struct ExportServiceTests {
         let locator = try BookLocator(format: .epub, spineIndex: 0, resourceHref: "chapter.xhtml", progression: 0)
         let highlight = Highlight(locatorData: try JSONEncoder().encode(locator), selectedText: "A selected passage", note: "A useful note", colorTag: "saffron", book: book)
 
-        let markdown = ExportService().markdown(for: book, highlights: [highlight])
+        let markdown = try ExportService().markdown(for: book, highlights: [highlight])
 
         #expect(markdown.contains("title: \"Fixture Book\""))
         #expect(markdown.contains("author: \"Varq Tests\""))
@@ -41,7 +41,7 @@ struct ExportServiceTests {
             book: book
         )
 
-        let markdown = ExportService().markdown(for: book, highlights: [])
+        let markdown = try ExportService().markdown(for: book, highlights: [])
         let data = try ExportService().jsonData(for: book, highlights: [])
         let object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         let exportedNotes = try #require(object["notes"] as? [[String: Any]])
@@ -53,9 +53,22 @@ struct ExportServiceTests {
         #expect(exportedNotes.first?["color"] as? String == HighlightColorTag.highlightGreen.rawValue)
     }
 
+    @Test func requiresExplicitConfirmationBeforeExportingAPrivateBook() throws {
+        let book = Book(title: "Private", author: "Author", libraryRelativePath: "private.epub", contentHash: "hash", format: .epub, isPrivate: true)
+        let service = ExportService()
+
+        #expect(throws: ExportServiceError.privateBookExportConfirmationRequired) {
+            try service.markdown(for: book, highlights: [])
+        }
+        #expect(throws: ExportServiceError.privateBookExportConfirmationRequired) {
+            try service.jsonData(for: book, highlights: [])
+        }
+        #expect(try service.markdown(for: book, highlights: [], privateBookExportConfirmed: true).contains("title: \"Private\""))
+    }
+
     @Test func escapesQuotesInYamlFrontmatter() throws {
         let book = Book(title: "The \"Secret\" History", author: "O'Brien, Jack", libraryRelativePath: "fixture.epub", contentHash: "hash", format: .epub)
-        let markdown = ExportService().markdown(for: book, highlights: [])
+        let markdown = try ExportService().markdown(for: book, highlights: [])
 
         #expect(markdown.contains("title: \"The \\\"Secret\\\" History\""))
         #expect(markdown.contains("author: \"O'Brien, Jack\""))
@@ -66,7 +79,7 @@ struct ExportServiceTests {
         let locator = try BookLocator(format: .epub, spineIndex: 0, resourceHref: "chapter.xhtml", progression: 0)
         let highlight = Highlight(locatorData: try JSONEncoder().encode(locator), selectedText: "Line one\nLine two\nLine three", note: nil, colorTag: "maroon", book: book)
 
-        let markdown = ExportService().markdown(for: book, highlights: [highlight])
+        let markdown = try ExportService().markdown(for: book, highlights: [highlight])
 
         #expect(markdown.contains("> Line one\n> Line two\n> Line three"))
     }
@@ -76,7 +89,7 @@ struct ExportServiceTests {
         let locator = try BookLocator(format: .epub, spineIndex: 0, resourceHref: "chapter.xhtml", progression: 0)
         let highlight = Highlight(locatorData: try JSONEncoder().encode(locator), selectedText: "Text", note: nil, colorTag: "saffron", book: book)
 
-        let markdown = ExportService().markdown(for: book, highlights: [highlight])
+        let markdown = try ExportService().markdown(for: book, highlights: [highlight])
 
         #expect(!markdown.contains("Note:"))
     }
@@ -90,7 +103,6 @@ struct ExportServiceTests {
         let object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         let exportedHighlights = try #require(object["highlights"] as? [[String: Any]])
 
-        // Swift JSONEncoder omits nil values by default; the key should be absent.
         #expect(!exportedHighlights.first!.keys.contains("note"))
     }
 
@@ -108,7 +120,7 @@ struct ExportServiceTests {
 
     @Test func markdownContainsExportedAtTimestamp() throws {
         let book = Book(title: "Book", author: "Author", libraryRelativePath: "fixture.epub", contentHash: "hash", format: .epub)
-        let markdown = ExportService().markdown(for: book, highlights: [])
+        let markdown = try ExportService().markdown(for: book, highlights: [])
 
         #expect(markdown.contains("exported_at:"))
     }

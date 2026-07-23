@@ -1,11 +1,30 @@
 import Foundation
 
+enum ExportServiceError: Error, Equatable {
+    case privateBookExportConfirmationRequired
+}
+
 struct ExportService {
-    func markdown(for book: Book, highlights: [Highlight]) -> String {
-        markdown(for: book, highlights: highlights, notes: book.notes)
+    func markdown(
+        for book: Book,
+        highlights: [Highlight],
+        privateBookExportConfirmed: Bool = false
+    ) throws -> String {
+        try markdown(
+            for: book,
+            highlights: highlights,
+            notes: book.notes,
+            privateBookExportConfirmed: privateBookExportConfirmed
+        )
     }
 
-    func markdown(for book: Book, highlights: [Highlight], notes: [ReadingNote]) -> String {
+    func markdown(
+        for book: Book,
+        highlights: [Highlight],
+        notes: [ReadingNote],
+        privateBookExportConfirmed: Bool = false
+    ) throws -> String {
+        try requirePrivateBookExportConfirmation(for: book, confirmed: privateBookExportConfirmed)
         let formatter = ISO8601DateFormatter()
         var lines = [
             "---",
@@ -39,11 +58,26 @@ struct ExportService {
         return lines.joined(separator: "\n")
     }
 
-    func jsonData(for book: Book, highlights: [Highlight]) throws -> Data {
-        try jsonData(for: book, highlights: highlights, notes: book.notes)
+    func jsonData(
+        for book: Book,
+        highlights: [Highlight],
+        privateBookExportConfirmed: Bool = false
+    ) throws -> Data {
+        try jsonData(
+            for: book,
+            highlights: highlights,
+            notes: book.notes,
+            privateBookExportConfirmed: privateBookExportConfirmed
+        )
     }
 
-    func jsonData(for book: Book, highlights: [Highlight], notes: [ReadingNote]) throws -> Data {
+    func jsonData(
+        for book: Book,
+        highlights: [Highlight],
+        notes: [ReadingNote],
+        privateBookExportConfirmed: Bool = false
+    ) throws -> Data {
+        try requirePrivateBookExportConfirmation(for: book, confirmed: privateBookExportConfirmed)
         let document = HighlightExportDocument(
             title: book.title,
             author: book.author,
@@ -64,6 +98,12 @@ struct ExportService {
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return try encoder.encode(document)
+    }
+
+    private func requirePrivateBookExportConfirmation(for book: Book, confirmed: Bool) throws {
+        guard !book.isPrivate || confirmed else {
+            throw ExportServiceError.privateBookExportConfirmationRequired
+        }
     }
 
     private func yamlString(_ value: String) -> String {
