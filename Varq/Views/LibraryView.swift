@@ -554,6 +554,8 @@ private struct CollectionIconPicker: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Use \(icon) for collection")
+                    .accessibilityValue(selectedIcon == icon ? "Selected" : "Not selected")
                     .help(icon)
                 }
             }

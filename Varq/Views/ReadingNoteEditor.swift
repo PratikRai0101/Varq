@@ -56,6 +56,7 @@ struct ReadingNoteEditor: View {
 
             TextEditor(text: $noteText)
                 .font(VarqTypography.ui(.body))
+                .accessibilityLabel("Note text")
                 .scrollContentBackground(.hidden)
                 .padding(VarqSpacing.compact)
                 .background(colorScheme == .dark ? Color.varqIndigoLight : Color.varqParchmentDeep)

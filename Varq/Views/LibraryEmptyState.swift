@@ -27,6 +27,5 @@ struct LibraryEmptyState: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.varqIndigo)
         .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.regular))
-        .accessibilityElement(children: .combine)
     }
 }

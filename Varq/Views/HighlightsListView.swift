@@ -40,6 +40,7 @@ struct HighlightsListView: View {
                         .padding(.vertical, VarqSpacing.compact)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityHint("Open this highlight in the reader.")
                     .contextMenu {
                         Button("Remove highlight", role: .destructive) {
                             Task {

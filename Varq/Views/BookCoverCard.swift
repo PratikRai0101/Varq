@@ -40,7 +40,26 @@ struct BookCoverCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, VarqSpacing.compact)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(book.title) by \(book.author)")
+        .accessibilityLabel(cardAccessibilityLabel)
+        .accessibilityValue(cardAccessibilityValue)
+        .accessibilityHint(book.format == .cbr ? "CBR reading support is planned for a future release." : "Open reader")
+    }
+
+    private var cardAccessibilityLabel: String {
+        if book.isPrivate {
+            return "\(book.title) by \(book.author), private book"
+        }
+        return "\(book.title) by \(book.author)"
+    }
+
+    private var cardAccessibilityValue: String {
+        guard book.readingProgress != nil else {
+            return "Not started"
+        }
+        guard showsReadingProgress else {
+            return "Reading progress hidden"
+        }
+        return "\(Int(progressValue * 100)) percent complete"
     }
 
     private var shouldShowReadingProgress: Bool {
