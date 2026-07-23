@@ -58,6 +58,11 @@ struct HighlightsListView: View {
         .padding(VarqSpacing.regular)
         .background(colorScheme == .dark ? Color.varqIndigo : Color.varqParchment)
         .navigationTitle("Highlights")
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button("Back to reader", systemImage: "chevron.backward", action: dismiss.callAsFunction)
+            }
+        }
         .task { viewModel.load(for: book) }
     }
 

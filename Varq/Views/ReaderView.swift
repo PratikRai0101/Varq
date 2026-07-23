@@ -11,6 +11,7 @@ struct ReaderView: View {
     @State private var pageTurnProgress: CGFloat = 0
     @State private var readerOpacity = 1.0
     @State private var isTurningPage = false
+    @State private var isHighlightsPresented = false
 
     init(book: Book, bookURL: URL, renderer: some BookRenderer) {
         _viewModel = State(initialValue: ReaderViewModel(book: book, bookURL: bookURL, renderer: renderer))
@@ -73,21 +74,22 @@ struct ReaderView: View {
             await viewModel.open()
         }
         .onDisappear { Task { await viewModel.close() } }
+        .sheet(isPresented: $isHighlightsPresented) {
+            HighlightsListView(
+                book: viewModel.highlightedBook,
+                navigateToHighlight: { highlight in
+                    Task { await viewModel.navigateToHighlight(highlight) }
+                },
+                deleteHighlight: { highlight in
+                    await viewModel.deleteHighlight(highlight)
+                }
+            )
+        }
         .toolbar {
             if viewModel.supportsTextHighlights {
                 ToolbarItem {
-                    NavigationLink {
-                        HighlightsListView(
-                            book: viewModel.highlightedBook,
-                            navigateToHighlight: { highlight in
-                                Task { await viewModel.navigateToHighlight(highlight) }
-                            },
-                            deleteHighlight: { highlight in
-                                await viewModel.deleteHighlight(highlight)
-                            }
-                        )
-                    } label: {
-                        Label("Highlights", systemImage: "list.bullet")
+                    Button("Highlights", systemImage: "list.bullet") {
+                        isHighlightsPresented = true
                     }
                 }
 
