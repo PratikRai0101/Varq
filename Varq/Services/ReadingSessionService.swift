@@ -5,8 +5,13 @@ import Observation
 @Observable
 final class ReadingSessionService {
     private(set) var startedAt: Date?
-    private(set) var elapsedSeconds: TimeInterval = 0
     private var accumulatedSeconds: TimeInterval = 0
+
+    /// The current session duration. This is derived rather than stored so rendering
+    /// the timer cannot trigger an observation update while SwiftUI is rendering.
+    var elapsedSeconds: TimeInterval {
+        elapsed(at: .now)
+    }
 
     func begin(at date: Date = .now) {
         guard startedAt == nil else { return }
@@ -14,21 +19,20 @@ final class ReadingSessionService {
     }
 
     func end(at date: Date = .now) -> TimeInterval {
-        refresh(at: date)
+        let completedSeconds = elapsed(at: date)
         startedAt = nil
-        accumulatedSeconds = elapsedSeconds
-        return elapsedSeconds
-    }
-
-    func refresh(at date: Date = .now) {
-        guard let startedAt else { return }
-        elapsedSeconds = accumulatedSeconds + max(date.timeIntervalSince(startedAt), 0)
+        accumulatedSeconds = completedSeconds
+        return completedSeconds
     }
 
     func formattedElapsed(at date: Date = .now) -> String {
-        refresh(at: date)
-        let minutes = Int(elapsedSeconds / 60)
+        let minutes = Int(elapsed(at: date) / 60)
         return minutes == 1 ? "1 min" : "\(minutes) min"
+    }
+
+    private func elapsed(at date: Date) -> TimeInterval {
+        guard let startedAt else { return accumulatedSeconds }
+        return accumulatedSeconds + max(date.timeIntervalSince(startedAt), 0)
     }
 }
 

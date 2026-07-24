@@ -2,7 +2,41 @@ import Foundation
 import Testing
 @testable import Varq
 
+private final class ObservationChangeCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    func increment() {
+        lock.lock()
+        count += 1
+        lock.unlock()
+    }
+
+    var value: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return count
+    }
+}
+
 struct ReadingSessionServiceTests {
+    @MainActor
+    @Test func formattingTheSessionTimeDoesNotMutateObservedSessionState() {
+        let service = ReadingSessionService()
+        service.begin(at: Date(timeIntervalSince1970: 100))
+        let changeCounter = ObservationChangeCounter()
+
+        withObservationTracking {
+            _ = service.elapsedSeconds
+        } onChange: {
+            changeCounter.increment()
+        }
+
+        _ = service.formattedElapsed(at: Date(timeIntervalSince1970: 160))
+
+        #expect(changeCounter.value == 0)
+    }
+
     @Test func estimatesRemainingTimeFromRecordedReadingRate() {
         let estimate = ReadingEstimateService().formattedRemainingTime(totalReadingSeconds: 600, progressFraction: 0.5)
         #expect(estimate == "~10 min left")
