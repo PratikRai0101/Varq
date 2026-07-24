@@ -21,6 +21,7 @@ struct LibraryView: View {
     @State private var collectionEditorName = ""
     @State private var collectionEditorIcon = "folder"
     @State private var collectionToDelete: BookCollection?
+    @State private var obsidianVaultExportViewModel = ObsidianVaultExportViewModel()
 
     let importViewModel: ImportViewModel
     let managedLibraryDirectory: URL
@@ -75,6 +76,11 @@ struct LibraryView: View {
         }
         .sheet(isPresented: $isSettingsPresented) {
             SettingsView()
+        }
+        .alert("Obsidian vault export", isPresented: obsidianExportAlertIsPresented) {
+            Button("OK", role: .cancel, action: obsidianVaultExportViewModel.clearResult)
+        } message: {
+            Text(obsidianExportMessage)
         }
         .alert("Delete \"\(collectionToDelete?.name ?? "")\"?", isPresented: deleteCollectionConfirmationIsPresented) {
             Button("Cancel", role: .cancel) { collectionToDelete = nil }
@@ -270,11 +276,37 @@ struct LibraryView: View {
                     }
                 }
                 ToolbarItem {
+                    Button("Export to Obsidian vault", systemImage: "square.and.arrow.up") {
+                        obsidianVaultExportViewModel.exportToSavedDestination(books: libraryViewModel.allBooks)
+                    }
+                    .help("Export public books, collections, and reading artifacts to an Obsidian vault")
+                }
+                ToolbarItem {
                     Button("Settings", systemImage: "gearshape") {
                         isSettingsPresented = true
                     }
                 }
         }
+    }
+
+    private var obsidianExportAlertIsPresented: Binding<Bool> {
+        Binding(
+            get: { obsidianVaultExportViewModel.errorMessage != nil || obsidianVaultExportViewModel.report != nil },
+            set: { isPresented in
+                if !isPresented {
+                    obsidianVaultExportViewModel.clearResult()
+                }
+            }
+        )
+    }
+
+    private var obsidianExportMessage: String {
+        if let error = obsidianVaultExportViewModel.errorMessage { return error }
+        guard let report = obsidianVaultExportViewModel.report else { return "" }
+        if report.skippedPrivateBookCount > 0 {
+            return "Exported \(report.exportedBookCount) public books. \(report.skippedPrivateBookCount) private books were not exported."
+        }
+        return "Exported \(report.exportedBookCount) books to Varq/ in your vault."
     }
 
     private var collectionEmptyState: some View {
