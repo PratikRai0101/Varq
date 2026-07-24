@@ -82,7 +82,7 @@ See `docs/ROADMAP.md` for the approved release sequence and `docs/adr/0009-keep-
 - [x] Add per-book local-intelligence consent policy for private books
 - [x] Enforce private-content consent policy at future index, export, and Private Cloud Compute destinations
 - [x] Add selected-passage explain, simplify, summarize, and discussion-question aids
-- [ ] Add EPUB chapter recap with evaluation coverage
+- [x] Add EPUB chapter recap with evaluation coverage
 - [ ] Add explicit on-device PDF/CBZ visible-page explanation
 - [ ] Add Obsidian Vault Export with stable Markdown, canonical wikilinks, and sandbox-safe chosen-folder access
 - [ ] Add Notion-ready Markdown export profile (direct Notion integration remains later)

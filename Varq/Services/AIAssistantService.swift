@@ -179,7 +179,7 @@ nonisolated struct AIAssistantService {
         case .discussionQuestions:
             instruction = "Write up to five thoughtful discussion questions about the selected passage as a numbered list."
         case .chapterRecap:
-            instruction = "Write a short recap of this chapter, followed by key ideas and up to three reflection questions."
+            instruction = "Write a concise, faithful chapter recap using this exact plain-text structure: a `Recap:` section, a `Key ideas:` section, and no more than three numbered reflection questions. Use only the passage and do not invent details."
         }
 
         return """
