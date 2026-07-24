@@ -1,3 +1,4 @@
+import CoreGraphics
 import Testing
 @testable import Varq
 
@@ -54,6 +55,30 @@ struct AIAssistantServiceTests {
         #expect(await responder.prompts.count == 3)
     }
 
+    @Test func generatesAVisiblePageExplanationFromOCRText() async throws {
+        let responder = RecordingAIAssistantResponder(response: "A page explanation.")
+        let service = AIAssistantService(
+            availabilityProvider: TestAIAssistantAvailabilityProvider(.available),
+            responder: responder
+        )
+        let context = try BoundedReadingContext(selectedText: "A caption from the page.")
+
+        let aid = try await service.generateVisiblePageExplanation(using: context)
+
+        #expect(aid.text == "A page explanation.")
+        #expect((await responder.prompts).first?.contains("extracted locally with OCR") == true)
+    }
+
+    @Test func boundsVisiblePageOCRTextBeforeSendingItToTheModel() async throws {
+        let ocrService = VisiblePageOCRService(
+            recognizer: TestVisiblePageTextRecognizer(text: String(repeating: "a", count: BoundedReadingContext.maximumCharacterCount + 10))
+        )
+
+        let context = try await ocrService.readingContext(for: VisiblePageImage(cgImage: try testImage()))
+
+        #expect(context.selectedText.count == BoundedReadingContext.maximumCharacterCount)
+    }
+
     @Test func rejectsContextThatExceedsTheBound() throws {
         let text = String(repeating: "a", count: BoundedReadingContext.maximumCharacterCount + 1)
 
@@ -87,6 +112,33 @@ private struct TestAIAssistantAvailabilityProvider: AIAssistantAvailabilityProvi
     func availability() -> AIAssistantAvailability {
         value
     }
+}
+
+private struct TestVisiblePageTextRecognizer: VisiblePageTextRecognizing {
+    let text: String
+
+    func recognizeText(in image: VisiblePageImage) async throws -> String {
+        text
+    }
+}
+
+private func testImage() throws -> CGImage {
+    guard let context = CGContext(
+        data: nil,
+        width: 1,
+        height: 1,
+        bitsPerComponent: 8,
+        bytesPerRow: 4,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ), let image = context.makeImage() else {
+        throw TestImageError.unavailable
+    }
+    return image
+}
+
+private enum TestImageError: Error {
+    case unavailable
 }
 
 private actor RecordingAIAssistantResponder: AIAssistantResponding {

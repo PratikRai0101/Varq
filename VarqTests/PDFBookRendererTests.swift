@@ -19,6 +19,13 @@ struct PDFBookRendererTests {
         #expect(renderer.currentLocator == firstPageLocator)
     }
 
+    @Test func suppliesTheCurrentPdfPageForLocalOCR() async throws {
+        let renderer = PDFBookRenderer(navigationView: FakePDFNavigationView())
+        try await renderer.open(bookURL: pdfFixtureURL, at: nil)
+
+        #expect(try renderer.visiblePageImage() != nil)
+    }
+
     @Test func createsAGeometricHighlightAnchorFromSelectedPdfText() async throws {
         let navigationView = FakePDFNavigationView()
         let renderer = PDFBookRenderer(navigationView: navigationView)

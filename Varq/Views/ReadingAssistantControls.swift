@@ -118,6 +118,7 @@ struct ReadingAssistantProgressView: View {
         case .summarize: "Summarizing your selection"
         case .discussionQuestions: "Writing discussion questions"
         case .chapterRecap: "Creating chapter recap"
+        case .visiblePageExplanation: "Reading this page"
         }
     }
 
@@ -151,7 +152,7 @@ struct GeneratedReadingAidPanel: View {
                     Text(result.kind.displayName)
                         .font(VarqTypography.uiMedium(.headline))
                         .foregroundStyle(primaryTextColor)
-                    Text("On-device response about your selection")
+                    Text(responseDescription)
                         .font(VarqTypography.ui(.caption))
                         .foregroundStyle(primaryTextColor.opacity(VarqOpacity.secondaryText))
                 }
@@ -214,6 +215,17 @@ struct GeneratedReadingAidPanel: View {
         pasteboard.clearContents()
         pasteboard.setString(plainText, forType: .string)
         hasCopiedResponse = true
+    }
+
+    private var responseDescription: String {
+        switch result.kind {
+        case .visiblePageExplanation:
+            "On-device OCR response about this page; it may miss artwork or layout."
+        case .chapterRecap:
+            "On-device response about this chapter; it may be inaccurate."
+        default:
+            "On-device response about your selection; it may be inaccurate."
+        }
     }
 
     private var plainText: String {

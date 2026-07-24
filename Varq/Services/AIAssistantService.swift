@@ -22,6 +22,7 @@ nonisolated enum ReadingAidKind: Equatable, Sendable {
     case summarize
     case discussionQuestions
     case chapterRecap
+    case visiblePageExplanation
 
     var displayName: String {
         switch self {
@@ -30,6 +31,7 @@ nonisolated enum ReadingAidKind: Equatable, Sendable {
         case .summarize: "Summarize"
         case .discussionQuestions: "Discussion questions"
         case .chapterRecap: "Chapter recap"
+        case .visiblePageExplanation: "Explain page"
         }
     }
 }
@@ -143,6 +145,12 @@ nonisolated struct AIAssistantService {
         return try await generate(.chapterRecap, using: recapContext)
     }
 
+    func generateVisiblePageExplanation(
+        using context: BoundedReadingContext
+    ) async throws -> GeneratedReadingAid {
+        try await generate(.visiblePageExplanation, using: context)
+    }
+
     func generate(
         _ kind: ReadingAidKind,
         using context: BoundedReadingContext
@@ -180,6 +188,8 @@ nonisolated struct AIAssistantService {
             instruction = "Write up to five thoughtful discussion questions about the selected passage as a numbered list."
         case .chapterRecap:
             instruction = "Write a concise, faithful chapter recap using this exact plain-text structure: a `Recap:` section, a `Key ideas:` section, and no more than three numbered reflection questions. Use only the passage and do not invent details."
+        case .visiblePageExplanation:
+            instruction = "The following text was extracted locally with OCR from the reader's current page. Explain it clearly and concisely. It may omit page layout, artwork, diagrams, or unreadable text, so say when the OCR text is insufficient rather than inventing visual details. This response is generated and may be inaccurate. Respond in plain text and do not use Markdown."
         }
 
         return """

@@ -113,6 +113,16 @@ struct ReaderView: View {
                 }
             }
 
+            if viewModel.supportsVisiblePageExplanation {
+                ToolbarItem {
+                    Button("Explain page", systemImage: "text.viewfinder") {
+                        Task { await viewModel.requestVisiblePageExplanation() }
+                    }
+                    .disabled(viewModel.isGeneratingReadingAid)
+                    .help("Explain readable text on this page using on-device OCR")
+                }
+            }
+
             if viewModel.supportsEpubLayoutControls {
                 ToolbarItem {
                     Button("Contents", systemImage: "list.bullet") {
@@ -218,7 +228,7 @@ struct ReaderView: View {
                 Task { await viewModel.grantPrivateBookIntelligenceConsent() }
             }
         } message: {
-            Text("Varq will process the selected text on this Mac. This permission applies only to this private book and can be revoked later.")
+            Text("Varq will process selected text or readable page text on this Mac. This permission applies only to this private book and can be revoked later.")
         }
         .sheet(
             item: Binding(

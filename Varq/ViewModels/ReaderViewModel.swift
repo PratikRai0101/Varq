@@ -18,6 +18,7 @@ final class ReaderViewModel {
     private let bookURL: URL
     private let privateBookSessionService: PrivateBookSessionService
     private let aiAssistantService: AIAssistantService
+    private let visiblePageOCRService: VisiblePageOCRService
     private let intelligenceConsentService: ReadingIntelligenceConsentService
     private var pendingReadingAidKind: ReadingAidKind?
     private var isChapterRecapPendingConsent = false
@@ -38,6 +39,7 @@ final class ReaderViewModel {
     var supportsComicControls: Bool { renderer.supportedFormat == .cbz }
     var supportsEpubLayoutControls: Bool { renderer.supportedFormat == .epub }
     var supportsTextHighlights: Bool { renderer is any TextSelectionProviding }
+    var supportsVisiblePageExplanation: Bool { renderer is any VisiblePageProviding }
 
     convenience init(book: Book, bookURL: URL, renderer: some BookRenderer) {
         self.init(
@@ -47,6 +49,7 @@ final class ReaderViewModel {
             settingsStore: UserDefaultsAppSettingsStore(),
             privateBookSessionService: PrivateBookSessionService(),
             aiAssistantService: AIAssistantService(),
+            visiblePageOCRService: VisiblePageOCRService(),
             intelligenceConsentService: ReadingIntelligenceConsentService()
         )
     }
@@ -58,6 +61,7 @@ final class ReaderViewModel {
         settingsStore: any AppSettingsStoring,
         privateBookSessionService: PrivateBookSessionService,
         aiAssistantService: AIAssistantService = AIAssistantService(),
+        visiblePageOCRService: VisiblePageOCRService = VisiblePageOCRService(),
         intelligenceConsentService: ReadingIntelligenceConsentService? = nil
     ) {
         self.init(
@@ -67,6 +71,7 @@ final class ReaderViewModel {
             initialReadingAppearance: settingsStore.load().defaultReadingAppearance,
             privateBookSessionService: privateBookSessionService,
             aiAssistantService: aiAssistantService,
+            visiblePageOCRService: visiblePageOCRService,
             intelligenceConsentService: intelligenceConsentService ?? ReadingIntelligenceConsentService()
         )
     }
@@ -78,6 +83,7 @@ final class ReaderViewModel {
         initialReadingAppearance: ReadingAppearance,
         privateBookSessionService: PrivateBookSessionService,
         aiAssistantService: AIAssistantService = AIAssistantService(),
+        visiblePageOCRService: VisiblePageOCRService = VisiblePageOCRService(),
         intelligenceConsentService: ReadingIntelligenceConsentService? = nil
     ) {
         self.book = book
@@ -86,6 +92,7 @@ final class ReaderViewModel {
         self.readingAppearance = initialReadingAppearance
         self.privateBookSessionService = privateBookSessionService
         self.aiAssistantService = aiAssistantService
+        self.visiblePageOCRService = visiblePageOCRService
         self.intelligenceConsentService = intelligenceConsentService ?? ReadingIntelligenceConsentService()
 
         if let interactionRenderer = renderer as? any ReaderAnnotationInteractionProviding {
@@ -257,6 +264,10 @@ final class ReaderViewModel {
             return
         }
         await generateChapterRecap()
+    }
+
+    func requestVisiblePageExplanation() async {
+        await requestReadingAid(.visiblePageExplanation)
     }
 
     func requestReadingAid(_ kind: ReadingAidKind) async {
@@ -441,6 +452,11 @@ final class ReaderViewModel {
     }
 
     private func generateReadingAid(_ kind: ReadingAidKind) async {
+        if kind == .visiblePageExplanation {
+            await generateVisiblePageExplanation()
+            return
+        }
+
         guard let selectionRenderer = renderer as? any TextSelectionProviding else {
             errorMessage = "Reading aids are unavailable for this book format."
             return
@@ -472,6 +488,45 @@ final class ReaderViewModel {
             }
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func generateVisiblePageExplanation() async {
+        guard let pageProvider = renderer as? any VisiblePageProviding else {
+            errorMessage = "Page explanation is available for PDF and CBZ books."
+            return
+        }
+        guard let image = try? pageProvider.visiblePageImage() else {
+            errorMessage = "Varq could not read this page."
+            return
+        }
+
+        do {
+            isGeneratingReadingAid = true
+            readingAidInProgress = .visiblePageExplanation
+            defer {
+                isGeneratingReadingAid = false
+                readingAidInProgress = nil
+            }
+            let context = try await visiblePageOCRService.readingContext(for: VisiblePageImage(cgImage: image))
+            let aid = try await aiAssistantService.generateVisiblePageExplanation(using: context)
+            guard let locator = renderer.currentLocator else {
+                return
+            }
+            generatedReadingAid = GeneratedReadingAidResult(
+                kind: .visiblePageExplanation,
+                text: aid.text,
+                noteAnchor: ReadingNoteAnchor(pageLocator: locator)
+            )
+            errorMessage = nil
+        } catch is VisiblePageOCRError {
+            errorMessage = "Varq could not find readable text on this page."
+        } catch let error as AIAssistantServiceError {
+            if case .unavailable(let reason) = error {
+                intelligenceUnavailableReason = reason
+            }
+        } catch {
+            errorMessage = "Varq could not explain this page."
         }
     }
 

@@ -130,12 +130,13 @@ private final class ComicImageCanvasView: NSView {
 }
 
 @MainActor
-final class CBZBookRenderer: BookRenderer {
+final class CBZBookRenderer: BookRenderer, VisiblePageProviding {
     private let pageView: any CBZPageView
     private let publicationService: CbzPublicationService
     private var publication: CbzPublication?
     private var readingDirection: ComicReadingDirection = .leftToRight
     private var pageLayout: ComicPageLayout = .singlePage
+    private var currentPageURLs: [URL] = []
     private(set) var currentLocator: BookLocator?
 
     var view: NSView { pageView.renderedView }
@@ -193,8 +194,17 @@ final class CBZBookRenderer: BookRenderer {
             try? await publicationService.remove(publication)
         }
         publication = nil
+        currentPageURLs = []
         currentLocator = nil
         pageView.clearImage()
+    }
+
+    func visiblePageImage() throws -> CGImage? {
+        guard let pageURL = currentPageURLs.first,
+              let image = NSImage(contentsOf: pageURL) else {
+            return nil
+        }
+        return image.cgImage(forProposedRect: nil, context: nil, hints: nil)
     }
 
     func goForward() async throws -> Bool {
@@ -218,7 +228,9 @@ final class CBZBookRenderer: BookRenderer {
         guard locator.resourceHref == nil || locator.resourceHref == page.archivePath else {
             throw BookRendererError.invalidLocator
         }
-        try pageView.displayImages(at: visiblePageURLs(startingAt: locator.spineIndex, in: publication))
+        let pageURLs = visiblePageURLs(startingAt: locator.spineIndex, in: publication)
+        try pageView.displayImages(at: pageURLs)
+        currentPageURLs = pageURLs
         currentLocator = try pageLocator(for: locator.spineIndex, in: publication)
     }
 

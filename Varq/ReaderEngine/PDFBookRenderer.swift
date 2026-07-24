@@ -58,7 +58,7 @@ extension PDFView: PDFNavigationView {
 }
 
 @MainActor
-final class PDFBookRenderer: BookRenderer, TextSelectionProviding, ReaderAnnotationInteractionProviding {
+final class PDFBookRenderer: BookRenderer, TextSelectionProviding, ReaderAnnotationInteractionProviding, VisiblePageProviding {
     private let navigationView: any PDFNavigationView
     private var annotationActionHandler: ((ReaderAnnotationAction) -> Void)?
     private var noteActivationHandler: ((UUID) -> Void)?
@@ -238,6 +238,15 @@ final class PDFBookRenderer: BookRenderer, TextSelectionProviding, ReaderAnnotat
     func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
         // PDFKit renders embedded PDF typography, so only the native view's surrounding page tone changes.
         navigationView.setPageTone(appearance.pageTone)
+    }
+
+    func visiblePageImage() throws -> CGImage? {
+        guard let currentLocator,
+              let page = navigationView.document?.page(at: currentLocator.spineIndex) else {
+            return nil
+        }
+        let image = page.thumbnail(of: NSSize(width: 2_048, height: 2_048), for: .mediaBox)
+        return image.cgImage(forProposedRect: nil, context: nil, hints: nil)
     }
 
     func close() async {

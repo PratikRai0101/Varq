@@ -27,6 +27,13 @@ struct CBZBookRendererTests {
         #expect(renderer.currentLocator?.spineIndex == 0)
     }
 
+    @Test func suppliesTheCurrentComicPageForLocalOCR() async throws {
+        let renderer = CBZBookRenderer(pageView: FakeCBZPageView())
+        try await renderer.open(bookURL: fixtureURL, at: nil)
+
+        #expect(try renderer.visiblePageImage() != nil)
+    }
+
     @Test func appliesTheSelectedPageFit() async throws {
         let pageView = FakeCBZPageView()
         let renderer = CBZBookRenderer(pageView: pageView)
