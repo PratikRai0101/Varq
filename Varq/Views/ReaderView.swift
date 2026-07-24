@@ -282,6 +282,23 @@ struct ReaderView: View {
                 },
             including: viewModel.supportsTextHighlights ? .none : .all
         )
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .task(id: proxy.size) {
+                        guard proxy.size.width > 0, proxy.size.height > 0 else {
+                            return
+                        }
+                        try? await Task.sleep(
+                            for: .milliseconds(VarqMotion.readerViewportReflowDebounceMilliseconds)
+                        )
+                        guard !Task.isCancelled else {
+                            return
+                        }
+                        await viewModel.updateReaderViewport()
+                    }
+            }
+        }
     }
 
     private var assistantSidebar: some View {

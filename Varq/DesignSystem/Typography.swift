@@ -42,6 +42,7 @@ enum VarqMotion {
     static let pageTurnDampingFraction = 0.82
     static let reducedMotionCrossFadeDuration = 0.18
     static let pageTurnSettleMilliseconds = 320
+    static let readerViewportReflowDebounceMilliseconds = 100
 }
 
 enum VarqOpacity {

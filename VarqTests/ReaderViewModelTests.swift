@@ -119,6 +119,18 @@ struct ReaderViewModelTests {
         #expect(renderer.updatedAppearance == viewModel.readingAppearance)
     }
 
+    @Test func reflowsTheRendererWhenTheReaderViewportChanges() async throws {
+        let locator = try epubLocator(progression: 0)
+        let renderer = FakeBookRenderer(locator: locator)
+        let viewModel = ReaderViewModel(book: book(), bookURL: bookURL, renderer: renderer)
+
+        await viewModel.open()
+        await viewModel.updateReaderViewport()
+
+        #expect(renderer.viewportUpdateCount == 1)
+        #expect(viewModel.currentLocator == locator)
+    }
+
     @Test func publishesWhyReadingAidsAreUnavailable() throws {
         let locator = try epubLocator(progression: 0)
         let assistant = AIAssistantService(
@@ -632,6 +644,7 @@ private final class FakeBookRenderer: BookRenderer, TextSelectionProviding, Chap
     var readingProgressFraction: Double { reportedProgressFraction ?? currentLocator?.progression ?? 0 }
     private(set) var openedLocator: BookLocator?
     private(set) var updatedAppearance: ReadingAppearance?
+    private(set) var viewportUpdateCount = 0
     private(set) var renderedHighlightIDs: [[UUID]] = []
     private(set) var renderedNoteIDs: [[UUID]] = []
     private(set) var navigatedHighlightAnchor: TextHighlightAnchor?
@@ -658,6 +671,10 @@ private final class FakeBookRenderer: BookRenderer, TextSelectionProviding, Chap
 
     func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
         updatedAppearance = appearance
+    }
+
+    func updateViewport() async throws {
+        viewportUpdateCount += 1
     }
 
     func selectedTextHighlightAnchor() async throws -> TextHighlightAnchor? {

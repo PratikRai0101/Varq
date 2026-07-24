@@ -147,6 +147,19 @@ final class ReaderViewModel {
         await navigate { try await renderer.goBackward() }
     }
 
+    func updateReaderViewport() async {
+        do {
+            try await renderer.updateViewport()
+            currentLocator = renderer.currentLocator
+            persistCurrentLocator()
+            await renderer.renderHighlights(book.highlights)
+            await renderer.renderNotes(book.notes)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func setEpubPageLayout(_ pageLayout: EpubPageLayout) async {
         var appearance = readingAppearance
         appearance.epubPageLayout = pageLayout

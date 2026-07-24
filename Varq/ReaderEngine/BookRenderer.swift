@@ -10,6 +10,7 @@ protocol BookRenderer: AnyObject {
 
     func open(bookURL: URL, at locator: BookLocator?) async throws
     func updateReadingAppearance(_ appearance: ReadingAppearance) async throws
+    func updateViewport() async throws
     func close() async
     func goForward() async throws -> Bool
     func goBackward() async throws -> Bool
@@ -23,6 +24,8 @@ extension BookRenderer {
     var readingProgressFraction: Double {
         currentLocator?.progression ?? 0
     }
+
+    func updateViewport() async throws {}
 
     func navigate(to highlightAnchor: TextHighlightAnchor) async throws {
         try await go(to: highlightAnchor.locator)

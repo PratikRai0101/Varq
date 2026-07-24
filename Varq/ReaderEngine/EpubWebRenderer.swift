@@ -76,13 +76,11 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
 
     func updateReadingAppearance(_ appearance: ReadingAppearance) async throws {
         self.appearance = appearance
-        guard let currentLocator else {
-            return
-        }
+        try await reflowPagination()
+    }
 
-        try await applyPaginationStyle()
-        let progression = try await setProgression(currentLocator.progression)
-        try updateCurrentLocator(progression: progression)
+    func updateViewport() async throws {
+        try await reflowPagination()
     }
 
     func setAnnotationActionHandler(_ handler: @escaping (ReaderAnnotationAction) -> Void) {
@@ -707,6 +705,15 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
         )
     }
 
+    private func reflowPagination() async throws {
+        guard let currentLocator else {
+            return
+        }
+        try await applyPaginationStyle()
+        let progression = try await setProgression(currentLocator.progression)
+        try updateCurrentLocator(progression: progression)
+    }
+
     private func loadSpineResource(at spineIndex: Int, progression: Double) async throws {
         guard let publication, publication.spine.indices.contains(spineIndex) else {
             throw BookRendererError.invalidLocator
@@ -763,7 +770,8 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
                 }
                 body {
                     width: ${availableWidth}px !important;
-                    min-height: ${height}px !important;
+                    height: ${height}px !important;
+                    min-height: 0 !important;
                     margin: 0 ${margin}px !important;
                     padding: 0 !important;
                     overflow: hidden !important;
