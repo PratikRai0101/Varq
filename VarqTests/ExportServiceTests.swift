@@ -16,6 +16,21 @@ struct ExportServiceTests {
         #expect(markdown.contains("Note: A useful note"))
     }
 
+    @Test func createsNotionReadyMarkdownWithoutObsidianSyntax() throws {
+        let book = Book(title: "Fixture Book", author: "Varq Tests", libraryRelativePath: "fixture.epub", contentHash: "hash", format: .epub)
+        let locator = try BookLocator(format: .epub, spineIndex: 0, resourceHref: "chapter.xhtml", progression: 0)
+        let highlight = Highlight(locatorData: try JSONEncoder().encode(locator), selectedText: "A selected passage", note: "A useful note", colorTag: "saffron", book: book)
+
+        let markdown = try ExportService().markdown(for: book, highlights: [highlight], notes: [], profile: .notion)
+
+        #expect(markdown.contains("# Fixture Book"))
+        #expect(markdown.contains("**Author:** Varq Tests"))
+        #expect(markdown.contains("## Highlights"))
+        #expect(markdown.contains("**Note:** A useful note"))
+        #expect(!markdown.contains("---"))
+        #expect(!markdown.contains("[["))
+    }
+
     @Test func createsStructuredJsonExport() throws {
         let book = Book(title: "Fixture Book", author: "Varq Tests", libraryRelativePath: "fixture.epub", contentHash: "hash", format: .epub)
         let locator = try BookLocator(format: .epub, spineIndex: 0, resourceHref: "chapter.xhtml", progression: 0)

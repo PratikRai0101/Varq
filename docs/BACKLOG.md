@@ -86,7 +86,7 @@ See `docs/ROADMAP.md` for the approved release sequence and `docs/adr/0009-keep-
 - [x] Add bounded on-device OCR fallback for PDF/CBZ visible-page explanation (clearly labeled as unable to interpret artwork/layout)
 - [ ] Add explicit on-device PDF/CBZ visible-page explanation with Foundation Models image input when the required SDK is available
 - [x] Add Obsidian Vault Export with stable Markdown, canonical wikilinks, and sandbox-safe chosen-folder access
-- [ ] Add Notion-ready Markdown export profile (direct Notion integration remains later)
+- [x] Add Notion-ready Markdown export profile (direct Notion integration remains later)
 - [ ] Add annotation replay, local reading goals/streaks, reading-session timer, and estimated time remaining
 
 ## Deferred beyond Phase 10

@@ -4,6 +4,11 @@ enum ExportServiceError: Error, Equatable {
     case privateBookExportConfirmationRequired
 }
 
+enum MarkdownExportProfile: Equatable, Sendable {
+    case obsidian
+    case notion
+}
+
 struct ExportService {
     func markdown(
         for book: Book,
@@ -16,6 +21,21 @@ struct ExportService {
             notes: book.notes,
             privateBookExportConfirmed: privateBookExportConfirmed
         )
+    }
+
+    func markdown(
+        for book: Book,
+        highlights: [Highlight],
+        notes: [ReadingNote],
+        profile: MarkdownExportProfile,
+        privateBookExportConfirmed: Bool = false
+    ) throws -> String {
+        switch profile {
+        case .obsidian:
+            try markdown(for: book, highlights: highlights, notes: notes, privateBookExportConfirmed: privateBookExportConfirmed)
+        case .notion:
+            try notionMarkdown(for: book, highlights: highlights, notes: notes, privateBookExportConfirmed: privateBookExportConfirmed)
+        }
     }
 
     func markdown(
@@ -54,6 +74,40 @@ struct ExportService {
             lines.append("")
             lines.append(note.body)
             lines.append("")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// Portable Markdown intended for Notion's Markdown importer. It deliberately omits YAML and wikilinks.
+    private func notionMarkdown(
+        for book: Book,
+        highlights: [Highlight],
+        notes: [ReadingNote],
+        privateBookExportConfirmed: Bool
+    ) throws -> String {
+        try requirePrivateBookExportConfirmation(for: book, confirmed: privateBookExportConfirmed)
+        var lines = ["# \(book.title)", "", "**Author:** \(book.author)", "", "## Highlights", ""]
+        for highlight in highlights.sorted(by: { $0.dateCreated < $1.dateCreated }) {
+            lines.append("> \(highlight.selectedText.replacingOccurrences(of: "\n", with: "\n> "))")
+            if let note = highlight.note, !note.isEmpty {
+                lines.append("")
+                lines.append("**Note:** \(note)")
+            }
+            lines.append("")
+        }
+        if !notes.isEmpty {
+            lines.append("## Notes")
+            lines.append("")
+            for note in notes.sorted(by: { $0.dateCreated < $1.dateCreated }) {
+                lines.append("### Note")
+                if let selectedText = note.selectedText, !selectedText.isEmpty {
+                    lines.append("")
+                    lines.append("> \(selectedText.replacingOccurrences(of: "\n", with: "\n> "))")
+                }
+                lines.append("")
+                lines.append(note.body)
+                lines.append("")
+            }
         }
         return lines.joined(separator: "\n")
     }
