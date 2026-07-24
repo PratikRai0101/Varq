@@ -17,6 +17,7 @@ struct ReaderView: View {
     @State private var isTableOfContentsPresented = false
     @State private var isAssistantSidebarPresented = false
     @State private var isAnnotationReplayPresented = false
+    @State private var dailyReadingGoalMinutes = 0
     private let assistantCompletionService = ReadingAssistantCompletionService()
 
     init(book: Book, bookURL: URL, renderer: some BookRenderer) {
@@ -54,6 +55,7 @@ struct ReaderView: View {
         }
         .task {
             viewModel.configurePersistence(using: modelContext)
+            dailyReadingGoalMinutes = viewModel.readingGoalProgress.dailyGoalMinutes
             await viewModel.open()
         }
         .onDisappear { Task { await viewModel.close() } }
@@ -91,11 +93,17 @@ struct ReaderView: View {
             }
 
             ToolbarItem {
-                Menu("Reading goal", systemImage: "target") {
-                    Button("No daily goal") { viewModel.setDailyReadingGoal(minutes: 0) }
-                    Button("15 minutes daily") { viewModel.setDailyReadingGoal(minutes: 15) }
-                    Button("30 minutes daily") { viewModel.setDailyReadingGoal(minutes: 30) }
-                    Button("45 minutes daily") { viewModel.setDailyReadingGoal(minutes: 45) }
+                Menu {
+                    readingGoalButton("No daily goal", minutes: 0)
+                    readingGoalButton("15 minutes daily", minutes: 15)
+                    readingGoalButton("30 minutes daily", minutes: 30)
+                    readingGoalButton("45 minutes daily", minutes: 45)
+                } label: {
+                    HStack(spacing: VarqSpacing.compact) {
+                        Image(systemName: "target")
+                        Text(readingGoalToolbarLabel)
+                            .font(VarqTypography.ui(.caption))
+                    }
                 }
                 .help("Set a local daily reading goal")
             }
@@ -383,6 +391,26 @@ struct ReaderView: View {
             .padding(VarqSpacing.regular)
         }
         .background(assistantSurfaceColor)
+    }
+
+    private var readingGoalToolbarLabel: String {
+        dailyReadingGoalMinutes > 0 ? "\(dailyReadingGoalMinutes)m goal" : "Goal"
+    }
+
+    @ViewBuilder
+    private func readingGoalButton(_ title: String, minutes: Int) -> some View {
+        Button {
+            viewModel.setDailyReadingGoal(minutes: minutes)
+            dailyReadingGoalMinutes = minutes
+        } label: {
+            HStack {
+                Text(title)
+                Spacer()
+                if dailyReadingGoalMinutes == minutes {
+                    Image(systemName: "checkmark")
+                }
+            }
+        }
     }
 
     private var assistantSurfaceColor: Color {
