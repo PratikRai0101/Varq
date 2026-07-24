@@ -19,6 +19,9 @@ final class ReaderViewModel {
     private let privateBookSessionService: PrivateBookSessionService
     private let aiAssistantService: AIAssistantService
     private let visiblePageOCRService: VisiblePageOCRService
+    private let readingSessionService = ReadingSessionService()
+    private let readingEstimateService = ReadingEstimateService()
+    private let readingGoalService = ReadingGoalService()
     private let intelligenceConsentService: ReadingIntelligenceConsentService
     private var pendingReadingAidKind: ReadingAidKind?
     private var isChapterRecapPendingConsent = false
@@ -40,6 +43,18 @@ final class ReaderViewModel {
     var supportsEpubLayoutControls: Bool { renderer.supportedFormat == .epub }
     var supportsTextHighlights: Bool { renderer is any TextSelectionProviding }
     var supportsVisiblePageExplanation: Bool { renderer is any VisiblePageProviding }
+    var readingSessionLabel: String { readingSessionService.formattedElapsed() }
+    var estimatedTimeRemainingLabel: String? {
+        readingEstimateService.formattedRemainingTime(
+            totalReadingSeconds: readingSessionService.elapsedSeconds,
+            progressFraction: renderer.readingProgressFraction
+        )
+    }
+    var readingGoalProgress: ReadingGoalProgress { readingGoalService.progress() }
+
+    func setDailyReadingGoal(minutes: Int) {
+        readingGoalService.setDailyGoal(minutes: minutes)
+    }
 
     convenience init(book: Book, bookURL: URL, renderer: some BookRenderer) {
         self.init(
@@ -116,6 +131,7 @@ final class ReaderViewModel {
             try await renderer.open(bookURL: readerURL, at: initialLocator)
             try await renderer.updateReadingAppearance(readingAppearance)
             currentLocator = renderer.currentLocator
+            readingSessionService.begin()
             persistCurrentLocator()
             await renderer.renderHighlights(book.highlights)
             await renderer.renderNotes(book.notes)
@@ -409,6 +425,8 @@ final class ReaderViewModel {
     func close() async {
         noteEditorState = nil
         persistCurrentLocator()
+        let sessionSeconds = readingSessionService.end()
+        readingGoalService.record(seconds: sessionSeconds)
         await renderer.close()
         privateBookSessionService.closeSession()
         currentLocator = nil

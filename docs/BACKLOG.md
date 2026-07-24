@@ -87,7 +87,7 @@ See `docs/ROADMAP.md` for the approved release sequence and `docs/adr/0009-keep-
 - [ ] Add explicit on-device PDF/CBZ visible-page explanation with Foundation Models image input when the required SDK is available
 - [x] Add Obsidian Vault Export with stable Markdown, canonical wikilinks, and sandbox-safe chosen-folder access
 - [x] Add Notion-ready Markdown export profile (direct Notion integration remains later)
-- [ ] Add annotation replay, local reading goals/streaks, reading-session timer, and estimated time remaining
+- [x] Add annotation replay, local reading goals/streaks, reading-session timer, and estimated time remaining
 
 ## Deferred beyond Phase 10
 CBR support (unless `docs/PRD.md`'s CBR deferral decision has been revisited), MOBI/AZW3/FB2 conversion, metadata auto-scraper, CloudKit sync/Handoff, bionic reading/RSVP, OPDS, Siri/Shortcuts/App Intents, and the iOS app remain planned for later releases in `docs/ROADMAP.md`. Do not pull them into the active backlog without completing their listed prerequisites.

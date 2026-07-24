@@ -16,6 +16,7 @@ struct ReaderView: View {
     @State private var isHighlightsPresented = false
     @State private var isTableOfContentsPresented = false
     @State private var isAssistantSidebarPresented = false
+    @State private var isAnnotationReplayPresented = false
     private let assistantCompletionService = ReadingAssistantCompletionService()
 
     init(book: Book, bookURL: URL, renderer: some BookRenderer) {
@@ -56,6 +57,14 @@ struct ReaderView: View {
             await viewModel.open()
         }
         .onDisappear { Task { await viewModel.close() } }
+        .sheet(isPresented: $isAnnotationReplayPresented) {
+            AnnotationReplayView(
+                highlights: viewModel.highlightedBook.highlights,
+                openHighlight: { highlight in
+                    Task { await viewModel.navigateToHighlight(highlight) }
+                }
+            )
+        }
         .sheet(isPresented: $isHighlightsPresented) {
             HighlightsListView(
                 book: viewModel.highlightedBook,
@@ -73,7 +82,32 @@ struct ReaderView: View {
                     .accessibilityHint("Return to your library")
             }
 
+            ToolbarItem {
+                TimelineView(.periodic(from: .now, by: 60)) { _ in
+                    Text(viewModel.readingSessionLabel)
+                        .font(VarqTypography.ui(.caption))
+                }
+                .help(viewModel.estimatedTimeRemainingLabel ?? "Reading session time")
+            }
+
+            ToolbarItem {
+                Menu("Reading goal", systemImage: "target") {
+                    Button("No daily goal") { viewModel.setDailyReadingGoal(minutes: 0) }
+                    Button("15 minutes daily") { viewModel.setDailyReadingGoal(minutes: 15) }
+                    Button("30 minutes daily") { viewModel.setDailyReadingGoal(minutes: 30) }
+                    Button("45 minutes daily") { viewModel.setDailyReadingGoal(minutes: 45) }
+                }
+                .help("Set a local daily reading goal")
+            }
+
             if viewModel.supportsTextHighlights {
+                ToolbarItem {
+                    Button("Review annotations", systemImage: "rectangle.stack") {
+                        isAnnotationReplayPresented = true
+                    }
+                    .help("Review annotations one at a time")
+                }
+
                 ToolbarItem {
                     Button("Highlights", systemImage: "bookmark") {
                         isHighlightsPresented = true
