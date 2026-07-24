@@ -55,21 +55,32 @@ struct ReadingAssistantControls: View {
 }
 
 struct ReadingAssistantEmptyView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.varqDarkTheme) private var darkTheme
+
     var body: some View {
-        VStack(spacing: VarqSpacing.regular) {
+        VStack(alignment: .leading, spacing: VarqSpacing.regular) {
             Image(systemName: "sparkles")
                 .font(VarqTypography.ui(.largeTitle))
-                .foregroundStyle(Color.varqSaffron)
-            Text("Reading assistant")
+                .foregroundStyle(accentColor)
+                .accessibilityHidden(true)
+            Text("Make the page clearer")
                 .font(VarqTypography.uiMedium(.title2))
-                .foregroundStyle(Color.varqInkLight)
+                .foregroundStyle(primaryTextColor)
             Text("Select text, then choose Explain, Simplify, Summarize, or Discussion questions from the sparkle menu.")
                 .font(VarqTypography.ui(.body))
-                .foregroundStyle(Color.varqInkLight.opacity(VarqOpacity.secondaryText))
-                .multilineTextAlignment(.center)
+                .foregroundStyle(primaryTextColor.opacity(VarqOpacity.secondaryText))
         }
-        .padding(VarqSpacing.large)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
+    }
+
+    private var primaryTextColor: Color {
+        colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight
+    }
+
+    private var accentColor: Color {
+        colorScheme == .dark ? darkTheme.accent : Color.varqSaffron
     }
 }
 
@@ -87,7 +98,7 @@ struct ReadingAssistantProgressView: View {
             Text(progressTitle)
                 .font(VarqTypography.uiMedium(.headline))
                 .foregroundStyle(primaryTextColor)
-            Text("Using Apple Intelligence on this Mac. This can take a moment.")
+            Text("Varq is using Apple Intelligence on this Mac. Keep reading while it finishes.")
                 .font(VarqTypography.ui(.body))
                 .foregroundStyle(primaryTextColor.opacity(VarqOpacity.secondaryText))
                 .multilineTextAlignment(.center)
@@ -179,7 +190,7 @@ struct GeneratedReadingAidPanel: View {
             }
         }
         .padding(VarqSpacing.large)
-        .frame(width: VarqLayout.readingAidPanelWidth)
+        .frame(maxWidth: .infinity)
         .frame(minHeight: VarqLayout.readingAidPanelMinimumHeight)
         .background(backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: VarqSpacing.regular))

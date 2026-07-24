@@ -4,6 +4,7 @@ import SwiftUI
 struct ReaderView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.varqDarkTheme) private var darkTheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var isReaderFocused: Bool
@@ -25,16 +26,18 @@ struct ReaderView: View {
         ZStack {
             darkTheme.background
 
-            NativeRendererView(rendererView: viewModel.rendererView)
-                .padding(VarqSpacing.regular)
-                .opacity(readerOpacity)
-
-            if !reduceMotion {
-                PageTurnOverlay(direction: pageTurnDirection, progress: pageTurnProgress)
-            }
-
             if isAssistantSidebarPresented {
-                assistantSidebar
+                HSplitView {
+                    readerCanvas
+                    assistantSidebar
+                        .frame(
+                            minWidth: VarqLayout.readingAssistantSidebarMinimumWidth,
+                            idealWidth: VarqLayout.readingAssistantSidebarIdealWidth,
+                            maxWidth: VarqLayout.readingAssistantSidebarMaximumWidth
+                        )
+                }
+            } else {
+                readerCanvas
             }
 
             if let errorMessage = viewModel.errorMessage {
@@ -48,35 +51,6 @@ struct ReaderView: View {
                 }
             }
         }
-        .focusable()
-        .focused($isReaderFocused)
-        .onAppear { isReaderFocused = true }
-        .onKeyPress(.leftArrow) {
-            performPageTurn(.backward)
-            return .handled
-        }
-        .onKeyPress(.rightArrow) {
-            performPageTurn(.forward)
-            return .handled
-        }
-        // WebKit and PDFKit need exclusive drag handling to create text selections.
-        // Keyboard navigation remains available while a text renderer is active.
-        .simultaneousGesture(
-            DragGesture(minimumDistance: VarqLayout.pageTurnSwipeDistance)
-                .onEnded { value in
-                    let horizontal = value.translation.width
-                    let vertical = value.translation.height
-                    // Require a clearly horizontal, deliberate swipe to avoid
-                    // colliding with WebKit text-selection drags.
-                    guard abs(horizontal) > abs(vertical) * 2,
-                          abs(horizontal) > 80
-                    else {
-                        return
-                    }
-                    performPageTurn(horizontal < 0 ? .forward : .backward)
-                },
-            including: viewModel.supportsTextHighlights ? .none : .all
-        )
         .task {
             viewModel.configurePersistence(using: modelContext)
             await viewModel.open()
@@ -269,26 +243,97 @@ struct ReaderView: View {
         }
     }
 
-    @ViewBuilder
-    private var assistantSidebar: some View {
-        Group {
-            if let kind = viewModel.readingAidInProgress {
-                ReadingAssistantProgressView(kind: kind)
-            } else if let result = viewModel.generatedReadingAid {
-                GeneratedReadingAidPanel(
-                    result: result,
-                    saveAsNote: viewModel.saveGeneratedReadingAidAsNote,
-                    dismiss: { isAssistantSidebarPresented = false }
-                )
-            } else {
-                ReadingAssistantEmptyView()
+    private var readerCanvas: some View {
+        ZStack {
+            NativeRendererView(rendererView: viewModel.rendererView)
+                .padding(VarqSpacing.regular)
+                .opacity(readerOpacity)
+
+            if !reduceMotion {
+                PageTurnOverlay(direction: pageTurnDirection, progress: pageTurnProgress)
             }
         }
-        .frame(width: VarqLayout.readingAidPanelWidth)
-        .frame(maxHeight: .infinity)
-        .background(Color.varqParchment)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-        .padding(VarqSpacing.regular)
+        .focusable()
+        .focused($isReaderFocused)
+        .onAppear { isReaderFocused = true }
+        .onKeyPress(.leftArrow) {
+            performPageTurn(.backward)
+            return .handled
+        }
+        .onKeyPress(.rightArrow) {
+            performPageTurn(.forward)
+            return .handled
+        }
+        // WebKit and PDFKit need exclusive drag handling to create text selections.
+        // Keyboard navigation remains available while a text renderer is active.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: VarqLayout.pageTurnSwipeDistance)
+                .onEnded { value in
+                    let horizontal = value.translation.width
+                    let vertical = value.translation.height
+                    // Require a clearly horizontal, deliberate swipe to avoid
+                    // colliding with WebKit text-selection drags.
+                    guard abs(horizontal) > abs(vertical) * 2,
+                          abs(horizontal) > 80
+                    else {
+                        return
+                    }
+                    performPageTurn(horizontal < 0 ? .forward : .backward)
+                },
+            including: viewModel.supportsTextHighlights ? .none : .all
+        )
+    }
+
+    private var assistantSidebar: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: VarqSpacing.compact) {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(assistantAccentColor)
+                    .accessibilityHidden(true)
+                Text("Reading assistant")
+                    .font(VarqTypography.uiMedium(.headline))
+                    .foregroundStyle(assistantPrimaryTextColor)
+                Spacer()
+                Button("Hide assistant", systemImage: "xmark") {
+                    isAssistantSidebarPresented = false
+                }
+                .labelStyle(.iconOnly)
+                .accessibilityLabel("Hide reading assistant")
+            }
+            .padding(VarqSpacing.regular)
+
+            Divider()
+                .overlay(assistantAccentColor.opacity(VarqOpacity.settingsTabBorder))
+
+            Group {
+                if let kind = viewModel.readingAidInProgress {
+                    ReadingAssistantProgressView(kind: kind)
+                } else if let result = viewModel.generatedReadingAid {
+                    GeneratedReadingAidPanel(
+                        result: result,
+                        saveAsNote: viewModel.saveGeneratedReadingAidAsNote,
+                        dismiss: viewModel.dismissGeneratedReadingAid
+                    )
+                } else {
+                    ReadingAssistantEmptyView()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(VarqSpacing.regular)
+        }
+        .background(assistantSurfaceColor)
+    }
+
+    private var assistantSurfaceColor: Color {
+        colorScheme == .dark ? darkTheme.surface : Color.varqParchmentDeep
+    }
+
+    private var assistantPrimaryTextColor: Color {
+        colorScheme == .dark ? darkTheme.primaryText : Color.varqInkLight
+    }
+
+    private var assistantAccentColor: Color {
+        colorScheme == .dark ? darkTheme.accent : Color.varqTerracotta
     }
 
     private var intelligenceUnavailableBinding: Binding<Bool> {
