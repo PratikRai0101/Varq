@@ -34,6 +34,37 @@ Apple Books is polished but restrictive about formats. Calibre is powerful but d
 
 **Varq** (वर्क़ / ورق) means “leaf” or “page” in Hindi and Urdu. It also refers to the fine decorative foil used in Indian art and cuisine—an idea reflected in Varq’s restrained indigo, saffron, terracotta, and parchment palette.
 
+## See Varq in action
+
+<p align="center">
+  <a href="https://raw.githubusercontent.com/PratikRai0101/varq-website/main/public/screenshots/library-light.webp">
+    <img src="https://raw.githubusercontent.com/PratikRai0101/varq-website/main/public/screenshots/library-light.webp" width="1000" alt="Varq library showing a warm grid of imported books" />
+  </a>
+  <br />
+  <sub><strong>Your library, in every format</strong> — covers, metadata, collections, and reading progress in one native Mac app.</sub>
+</p>
+
+<table>
+  <tr>
+    <td width="50%">
+      <a href="https://raw.githubusercontent.com/PratikRai0101/varq-website/main/public/screenshots/reader-highlights.webp">
+        <img src="https://raw.githubusercontent.com/PratikRai0101/varq-website/main/public/screenshots/reader-highlights.webp" alt="Varq reader displaying persistent text highlights" />
+      </a>
+    </td>
+    <td width="50%">
+      <a href="https://raw.githubusercontent.com/PratikRai0101/varq-website/main/public/screenshots/reading-assistant.webp">
+        <img src="https://raw.githubusercontent.com/PratikRai0101/varq-website/main/public/screenshots/reading-assistant.webp" alt="Varq reader with the on-device reading assistant open" />
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Keep the lines that matter</strong><br /><sub>Persistent highlights and reading notes</sub></td>
+    <td align="center"><strong>Make difficult pages clearer</strong><br /><sub>On-device reading aids on eligible Macs</sub></td>
+  </tr>
+</table>
+
+<p align="center"><sub>Actual pre-release Varq interface. Click any screenshot to view it full size.</sub></p>
+
 ## What it does
 
 ### Build a library that stays yours
@@ -209,14 +240,6 @@ Please open an issue before starting a large feature so its scope and release fi
 
 Varq is available under the [MIT License](LICENSE).
 
-## Star history
+## Support the project
 
-If Varq is useful to you, consider starring the repository—it helps more Mac readers discover the project.
-
-<a href="https://www.star-history.com/#PratikRai0101/Varq&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=PratikRai0101/Varq&type=date&theme=dark&legend=top-left" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=PratikRai0101/Varq&type=date&legend=top-left" />
-    <img alt="Varq star history chart" src="https://api.star-history.com/svg?repos=PratikRai0101/Varq&type=date&legend=top-left" />
-  </picture>
-</a>
+If Varq is useful to you, [star the repository](https://github.com/PratikRai0101/Varq)—it helps more Mac readers discover the project. A Star History chart will be added once the project has enough public history to make the chart useful and reliable.
