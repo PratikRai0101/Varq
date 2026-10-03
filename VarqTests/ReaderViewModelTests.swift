@@ -303,6 +303,73 @@ struct ReaderViewModelTests {
         #expect(viewModel.noteEditorState?.initialBody == "Saved response")
     }
 
+    @Test func approvingPrivateChapterRecapConsentResumesThatRecap() async throws {
+        let locator = try epubLocator(progression: 0)
+        let privateBook = book()
+        privateBook.isPrivate = true
+        let renderer = FakeBookRenderer(locator: locator, chapterText: "Private chapter text")
+        try await renderer.go(to: locator)
+        let responder = ReaderTestAIAssistantResponder(response: "Private recap")
+        let assistant = AIAssistantService(
+            availabilityProvider: ReaderTestAIAssistantAvailabilityProvider(.available),
+            responder: responder
+        )
+        let viewModel = ReaderViewModel(
+            book: privateBook, bookURL: bookURL, renderer: renderer,
+            initialReadingAppearance: ReadingAppearance(),
+            privateBookSessionService: PrivateBookSessionService(), aiAssistantService: assistant,
+            intelligenceConsentService: ReadingIntelligenceConsentService(store: ReaderTestConsentStore())
+        )
+
+        await viewModel.requestChapterRecap()
+        #expect(viewModel.isPrivateBookIntelligenceConsentPresented)
+        #expect(await responder.prompts.isEmpty)
+        await viewModel.grantPrivateBookIntelligenceConsent()
+
+        #expect(!viewModel.isPrivateBookIntelligenceConsentPresented)
+        #expect(viewModel.generatedReadingAid?.kind == .chapterRecap)
+        #expect(viewModel.generatedReadingAid?.text == "Private recap")
+        let generatedPrompts = await responder.prompts
+        #expect(!generatedPrompts.isEmpty)
+        await viewModel.grantPrivateBookIntelligenceConsent()
+        #expect(await responder.prompts == generatedPrompts)
+    }
+
+    @Test(arguments: [ReadingAidKind.chapterRecap, .summarize])
+    func cancellingPrivateAidDiscardsTheRequestWithoutGrantingConsent(kind: ReadingAidKind) async throws {
+        let (viewModel, responder, store, privateBook) = try await privateConsentReader()
+        await viewModel.requestReadingAid(kind)
+        #expect(viewModel.isPrivateBookIntelligenceConsentPresented)
+
+        viewModel.cancelPrivateBookIntelligenceConsent()
+        await viewModel.grantPrivateBookIntelligenceConsent()
+
+        #expect(!viewModel.isPrivateBookIntelligenceConsentPresented)
+        #expect(!store.hasConsent(for: privateBook.id))
+        #expect(viewModel.generatedReadingAid == nil)
+        #expect(await responder.prompts.isEmpty)
+        await viewModel.requestReadingAid(.explain)
+        #expect(viewModel.isPrivateBookIntelligenceConsentPresented)
+        await viewModel.grantPrivateBookIntelligenceConsent()
+        #expect(viewModel.generatedReadingAid?.kind == .explain)
+    }
+
+    @Test(arguments: [ReadingAidKind.chapterRecap, .summarize])
+    func approvalResumesTheLatestPrivateAidWithoutAStaleRecap(kind: ReadingAidKind) async throws {
+        let (viewModel, responder, _, _) = try await privateConsentReader()
+        await viewModel.requestReadingAid(kind == .chapterRecap ? .summarize : .chapterRecap)
+        await viewModel.requestReadingAid(kind)
+        #expect(await responder.prompts.isEmpty)
+
+        await viewModel.grantPrivateBookIntelligenceConsent()
+
+        #expect(viewModel.generatedReadingAid?.kind == kind)
+        viewModel.dismissGeneratedReadingAid()
+        await viewModel.requestReadingAid(.explain)
+        #expect(!viewModel.isPrivateBookIntelligenceConsentPresented)
+        #expect(viewModel.generatedReadingAid?.kind == .explain)
+    }
+
     @Test func requestsConsentBeforeGeneratingForAPrivateBook() async throws {
         let locator = try epubLocator(progression: 0)
         let anchor = try TextHighlightAnchor(
@@ -555,6 +622,30 @@ struct ReaderViewModelTests {
         #expect(renderer.openedLocator == storedLocator)
         #expect(renderer.didClose)
         #expect(viewModel.currentLocator == nil)
+    }
+
+    private func privateConsentReader() async throws -> (ReaderViewModel, ReaderTestAIAssistantResponder, ReaderTestConsentStore, Book) {
+        let locator = try epubLocator(progression: 0)
+        let privateBook = book()
+        privateBook.isPrivate = true
+        let anchor = try TextHighlightAnchor(
+            locator: locator, startOffset: 0, endOffset: 8,
+            quote: TextQuoteSelector(exact: "A passage")
+        )
+        let renderer = FakeBookRenderer(locator: locator, selectedAnchor: anchor, chapterText: "Private chapter text")
+        try await renderer.go(to: locator)
+        let responder = ReaderTestAIAssistantResponder(response: "Local reading aid")
+        let store = ReaderTestConsentStore()
+        let viewModel = ReaderViewModel(
+            book: privateBook, bookURL: bookURL, renderer: renderer,
+            initialReadingAppearance: ReadingAppearance(),
+            privateBookSessionService: PrivateBookSessionService(),
+            aiAssistantService: AIAssistantService(
+                availabilityProvider: ReaderTestAIAssistantAvailabilityProvider(.available), responder: responder
+            ),
+            intelligenceConsentService: ReadingIntelligenceConsentService(store: store)
+        )
+        return (viewModel, responder, store, privateBook)
     }
 
     private var bookURL: URL {

@@ -12,6 +12,8 @@ Private Books are excluded by default from all Search Index content, Spotlight i
 
 A reader may use Local Intelligence with a Private Book only after an explicit, per-book confirmation that says the content remains on the device. That confirmation is not a blanket consent for Private Cloud Intelligence or indexing.
 
+ReaderViewModel keeps one pending local reading-aid action, including chapter recap. Approval consumes and resumes that action; cancellation discards it without granting consent. If a request is replaced while confirmation is pending, only the latest action resumes. A stale or repeated approval with no pending action neither grants consent nor generates content. No reading aid is generated before the per-book decision allows it.
+
 Private Cloud Intelligence is a separately enabled, opt-in feature. Before its first use with any book, Varq must explain that the request is processed by Apple Private Cloud Compute and obtain consent. A Private Book requires an additional per-book confirmation before its content can be sent through that feature.
 
 Vault Export is always user initiated through a system folder chooser. Exporting a Private Book requires a clear confirmation that the resulting selected-folder files are no longer protected by Varq’s private-shelf encryption.

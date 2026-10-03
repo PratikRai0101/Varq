@@ -24,7 +24,6 @@ final class ReaderViewModel {
     private let readingGoalService = ReadingGoalService()
     private let intelligenceConsentService: ReadingIntelligenceConsentService
     private var pendingReadingAidKind: ReadingAidKind?
-    private var isChapterRecapPendingConsent = false
     private var modelContext: ModelContext?
 
     private(set) var currentLocator: BookLocator?
@@ -274,12 +273,7 @@ final class ReaderViewModel {
     }
 
     func requestChapterRecap() async {
-        guard case .allowed = intelligenceConsentService.access(for: book) else {
-            isChapterRecapPendingConsent = true
-            isPrivateBookIntelligenceConsentPresented = true
-            return
-        }
-        await generateChapterRecap()
+        await requestReadingAid(.chapterRecap)
     }
 
     func requestVisiblePageExplanation() async {
@@ -296,23 +290,15 @@ final class ReaderViewModel {
     }
 
     func grantPrivateBookIntelligenceConsent() async {
-        intelligenceConsentService.grantLocalIntelligenceConsent(for: book)
-        isPrivateBookIntelligenceConsentPresented = false
-        guard let pendingReadingAidKind else {
-            return
-        }
+        guard let pendingReadingAidKind else { return }
         self.pendingReadingAidKind = nil
-        if isChapterRecapPendingConsent {
-            isChapterRecapPendingConsent = false
-            await generateChapterRecap()
-        } else {
-            await generateReadingAid(pendingReadingAidKind)
-        }
+        isPrivateBookIntelligenceConsentPresented = false
+        intelligenceConsentService.grantLocalIntelligenceConsent(for: book)
+        await generateReadingAid(pendingReadingAidKind)
     }
 
     func cancelPrivateBookIntelligenceConsent() {
         pendingReadingAidKind = nil
-        isChapterRecapPendingConsent = false
         isPrivateBookIntelligenceConsentPresented = false
     }
 
@@ -474,6 +460,10 @@ final class ReaderViewModel {
     }
 
     private func generateReadingAid(_ kind: ReadingAidKind) async {
+        if kind == .chapterRecap {
+            await generateChapterRecap()
+            return
+        }
         if kind == .visiblePageExplanation {
             await generateVisiblePageExplanation()
             return
