@@ -33,16 +33,24 @@ An uncommitted replacement is removed only after verifying the managed copy. `.c
 
 Save or key-cleanup failures retain pending recovery state for retry. Missing files, unknown content hashes, damaged/unsupported records, unsafe paths, and missing library entries block reading, library mutations, and exports in all windows. When the managed source is missing or unrecognized, staging is preserved rather than discarded. The recovery screen keeps its diagnosis when an alert is dismissed.
 
+## Reader-session cleanup
+
+`ReaderSessionStorageService` allocates decrypted book copies and EPUB/CBZ extraction trees under the sandbox temporary directory's `Varq/ReaderSessions` namespace. The shared storage service holds an exclusive kernel lease on `<owner UUID>/lease.lock` for the application process lifetime. Directories use `0700`; leases and decrypted book files use `0600`. No key or book identifier is written into lease metadata. Default EPUB views use a nonpersistent WebKit website data store.
+
+Before journal reconciliation or library access, startup attempts cleanup under a nonblocking coordinator lock. It skips owners whose leases are held, including other running app processes. After acquiring a stale owner's lease, it atomically renames that directory to `.discarded-<UUID>` before recursive deletion; the marker permits retry even if the lease file has already been removed. Empty owners left before lease creation are safe to remove because creation is serialized and no book content is written before acquiring the lease.
+
+Unknown entries, missing leases in nonempty directories, unsafe paths, and I/O failures preserve unresolved artifacts and block startup through the existing shared recovery screen. Reader-close deletion failures remain tracked and are retried before more temporary files can be allocated. Renderer close remains nonthrowing; a failed release is reported by the next allocation or startup cleanup rather than silently forgotten. Legacy UUID directories outside this new owned namespace lack reliable ownership markers and are deliberately not bulk-deleted.
+
 ## Limits
 
 - File replacement and journal completion markers are atomic operations, not a single transaction across filesystem, Keychain, and SwiftData. Recovery covers app-process termination at journaled boundaries; it is not a guarantee against disk failure or sudden power loss.
 - The unkeyed metadata checksum detects accidental damage, not malicious rewriting by an attacker with access to the app sandbox.
 - Deleted or unrecognized content is not reconstructed automatically, and unjournaled legacy inconsistencies are not inferred from filenames or extensions.
-- Reader-session plaintext cleanup after abnormal termination is separate from protection-transition recovery and remains follow-up work.
+- Reader-session cleanup is separate from protection-transition recovery. It covers process interruption for files created in the leased namespace, not legacy unmarked files, malicious sandbox rewriting, secure erasure, OS-managed caches, disk failure, or sudden power loss.
 
 ## Consequences
 
 - Successful protection changes keep the private flag consistent with the managed file. A failed rollback is reported as needing recovery, not treated as a completed protection change.
-- Reader URL plumbing must become session-aware before private books are opened.
+- Reader URL plumbing and archive extraction must remain session-aware; new reader caches must use the leased storage allocator rather than arbitrary temporary directories.
 - Private-book operations require integration tests for save, rollback, key-cleanup, and restart boundaries, plus a signed sandboxed manual security review before release.
 - Private-book persistence exposes an injectable save boundary so failure paths can be tested with real encryption and SwiftData models without requiring a damaged database.

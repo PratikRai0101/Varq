@@ -6,7 +6,7 @@ import WebKit
 final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, ChapterTextProviding, TableOfContentsProviding, ReaderAnnotationInteractionProviding, WKNavigationDelegate {
     private let webView: WKWebView
     private let publicationService: EpubPublicationService
-    private let sessionRootDirectory: URL
+    private let sessionStorage: ReaderSessionStorageService
     private var publication: EpubPublication?
     private var appearance = ReadingAppearance()
     private var navigationContinuation: CheckedContinuation<Void, Error>?
@@ -26,11 +26,11 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
     }
 
     override init() {
-        webView = ReaderWebView()
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .nonPersistent()
+        webView = ReaderWebView(frame: .zero, configuration: configuration)
         publicationService = EpubPublicationService()
-        sessionRootDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("Varq", isDirectory: true)
-            .appendingPathComponent("EPUBReader", isDirectory: true)
+        sessionStorage = .shared
         super.init()
         webView.navigationDelegate = self
         configureContextMenu()
@@ -43,7 +43,9 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
     ) {
         self.webView = webView
         self.publicationService = publicationService
-        self.sessionRootDirectory = sessionRootDirectory
+        self.sessionStorage = ReaderSessionStorageService(
+            rootDirectory: sessionRootDirectory.appendingPathComponent("ReaderSessions", isDirectory: true)
+        )
         super.init()
         webView.navigationDelegate = self
         configureContextMenu()
@@ -52,12 +54,15 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
     func open(bookURL: URL, at locator: BookLocator? = nil) async throws {
         await close()
 
-        let extractionDirectory = sessionRootDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        let publication = try await publicationService.extract(
-            at: bookURL,
-            into: extractionDirectory
-        )
+        let extractionDirectory = try sessionStorage.makeDirectory()
+        let publication: EpubPublication
+        do {
+            publication = try await publicationService.extract(at: bookURL, into: extractionDirectory)
+        } catch {
+            // Failed releases remain tracked by storage for retry/startup cleanup.
+            try? sessionStorage.removeDirectory(extractionDirectory)
+            throw error
+        }
         self.publication = publication
 
         do {
@@ -593,7 +598,9 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
 
     func close() async {
         if let publication {
-            try? await publicationService.remove(publication)
+            // BookRenderer.close is nonthrowing; storage retains failed removals
+            // and blocks further cache allocation until cleanup can succeed.
+            try? sessionStorage.removeDirectory(publication.rootDirectory)
         }
         publication = nil
         currentLocator = nil

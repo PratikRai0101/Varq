@@ -133,6 +133,7 @@ private final class ComicImageCanvasView: NSView {
 final class CBZBookRenderer: BookRenderer, VisiblePageProviding {
     private let pageView: any CBZPageView
     private let publicationService: CbzPublicationService
+    private let sessionStorage: ReaderSessionStorageService
     private var publication: CbzPublication?
     private var readingDirection: ComicReadingDirection = .leftToRight
     private var pageLayout: ComicPageLayout = .singlePage
@@ -151,20 +152,30 @@ final class CBZBookRenderer: BookRenderer, VisiblePageProviding {
     init() {
         pageView = CBZImageView()
         publicationService = CbzPublicationService()
+        sessionStorage = .shared
     }
 
-    init(pageView: any CBZPageView, publicationService: CbzPublicationService = CbzPublicationService()) {
+    init(
+        pageView: any CBZPageView,
+        publicationService: CbzPublicationService = CbzPublicationService(),
+        sessionStorage: ReaderSessionStorageService? = nil
+    ) {
         self.pageView = pageView
         self.publicationService = publicationService
+        self.sessionStorage = sessionStorage ?? .shared
     }
 
     func open(bookURL: URL, at locator: BookLocator? = nil) async throws {
         await close()
 
-        let rootDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("Varq-CBZ", isDirectory: true)
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        let publication = try await publicationService.extract(at: bookURL, into: rootDirectory)
+        let rootDirectory = try sessionStorage.makeDirectory()
+        let publication: CbzPublication
+        do {
+            publication = try await publicationService.extract(at: bookURL, into: rootDirectory)
+        } catch {
+            try? sessionStorage.removeDirectory(rootDirectory)
+            throw error
+        }
         self.publication = publication
 
         let initialLocator = try locator ?? BookLocator(
@@ -191,7 +202,8 @@ final class CBZBookRenderer: BookRenderer, VisiblePageProviding {
 
     func close() async {
         if let publication {
-            try? await publicationService.remove(publication)
+            // Failed removal stays tracked and is retried before new allocation.
+            try? sessionStorage.removeDirectory(publication.rootDirectory)
         }
         publication = nil
         currentPageURLs = []

@@ -5,6 +5,28 @@ import Testing
 
 @MainActor
 struct CBZBookRendererTests {
+    @Test func rendererCloseReleasesItsOwnedExtractionWithoutTouchingAnotherReader() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let storage = ReaderSessionStorageService(rootDirectory: root)
+        let firstPageView = FakeCBZPageView()
+        let secondPageView = FakeCBZPageView()
+        let first = CBZBookRenderer(pageView: firstPageView, sessionStorage: storage)
+        let second = CBZBookRenderer(pageView: secondPageView, sessionStorage: storage)
+        try await first.open(bookURL: fixtureURL)
+        try await second.open(bookURL: fixtureURL)
+        let firstPage = try #require(firstPageView.displayedURL)
+        let secondPage = try #require(secondPageView.displayedURL)
+
+        await first.close()
+        try ReaderSessionStorageService(rootDirectory: root).cleanupStaleSessions()
+
+        #expect(!FileManager.default.fileExists(atPath: firstPage.path))
+        #expect(FileManager.default.fileExists(atPath: secondPage.path))
+        await second.close()
+        #expect(!FileManager.default.fileExists(atPath: secondPage.path))
+    }
+
     @Test func displaysImagePagesAndNavigatesBySequence() async throws {
         let pageView = FakeCBZPageView()
         let renderer = CBZBookRenderer(pageView: pageView)

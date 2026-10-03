@@ -2,16 +2,11 @@ import AppKit
 import SwiftUI
 
 final class VarqAppDelegate: NSObject, NSApplicationDelegate {
-    private let sessionService = PrivateBookSessionService()
-
     func applicationDidFinishLaunching(_ notification: Notification) {
         let settings = UserDefaultsAppSettingsStore().load()
         AppAppearance.apply(settings.appearance)
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
-        sessionService.endApplicationSession()
-    }
 }
 
 @MainActor

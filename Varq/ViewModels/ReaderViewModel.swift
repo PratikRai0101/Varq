@@ -428,7 +428,11 @@ final class ReaderViewModel {
         let sessionSeconds = readingSessionService.end()
         readingGoalService.record(seconds: sessionSeconds)
         await renderer.close()
-        privateBookSessionService.closeSession()
+        do {
+            try privateBookSessionService.closeSession()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
         currentLocator = nil
     }
 

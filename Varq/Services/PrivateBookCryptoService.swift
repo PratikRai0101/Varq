@@ -18,9 +18,11 @@ struct PrivateBookCryptoService {
         let plaintext = try AES.GCM.open(sealedBox, using: key)
         try FileManager.default.createDirectory(
             at: destinationURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
         )
         try plaintext.write(to: destinationURL, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destinationURL.path)
     }
 
     func encrypt(_ plaintext: Data, using key: SymmetricKey) throws -> Data {

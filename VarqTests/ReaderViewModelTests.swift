@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import Foundation
 import SwiftData
 import Testing
@@ -6,6 +7,33 @@ import Testing
 
 @MainActor
 struct ReaderViewModelTests {
+    @Test func readerCloseReportsPrivateCopyCleanupFailures() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let managed = directory.appendingPathComponent("book.epub")
+        let key = SymmetricKey(size: .bits256)
+        try PrivateBookCryptoService().encrypt(Data("private text".utf8), using: key).write(to: managed)
+        let book = book()
+        book.isPrivate = true
+        let manager = FailingSessionCleanupFileManager()
+        let storage = ReaderSessionStorageService(rootDirectory: directory.appendingPathComponent("ReaderSessions"), fileManager: manager)
+        let session = PrivateBookSessionService(keyStore: FakeSessionKeyStore(key: key, bookID: book.id), storage: storage)
+        let copy = try session.readerURL(for: book, managedFileURL: managed)
+        let renderer = FakeBookRenderer(locator: try epubLocator(progression: 0))
+        let viewModel = ReaderViewModel(book: book, bookURL: managed, renderer: renderer, initialReadingAppearance: ReadingAppearance(pageTone: .light), privateBookSessionService: session)
+        await viewModel.open()
+        manager.failingPath = copy.deletingLastPathComponent().path
+
+        await viewModel.close()
+
+        #expect(renderer.didClose)
+        #expect(viewModel.errorMessage == SessionCleanupTestError.denied.localizedDescription)
+        #expect(FileManager.default.fileExists(atPath: copy.path))
+        manager.failingPath = nil
+        try session.closeSession()
+    }
+
     @Test func opensAndPublishesTheRendererLocator() async throws {
         let initialLocator = try epubLocator(progression: 0)
         let renderer = FakeBookRenderer(locator: initialLocator)

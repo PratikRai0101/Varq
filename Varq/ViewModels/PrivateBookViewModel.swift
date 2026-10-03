@@ -7,20 +7,24 @@ import SwiftData
 final class PrivateBookViewModel {
     private let protectionService: any PrivateBookProtecting
     private let saveChanges: (ModelContext) throws -> Void
+    private let readerSessionStorage: ReaderSessionStorageService
     private(set) var errorMessage: String?
     private(set) var isRecoveryComplete = false
 
     init(
         protectionService: (any PrivateBookProtecting)? = nil,
+        readerSessionStorage: ReaderSessionStorageService? = nil,
         saveChanges: @escaping (ModelContext) throws -> Void = { try $0.save() }
     ) {
         self.protectionService = protectionService ?? PrivateBookProtectionService()
         self.saveChanges = saveChanges
+        self.readerSessionStorage = readerSessionStorage ?? .shared
     }
 
     func recoverInterruptedChanges(using modelContext: ModelContext, managedLibraryDirectory: URL) {
         isRecoveryComplete = false
         do {
+            try readerSessionStorage.cleanupStaleSessions()
             let states = try protectionService.recoverableChanges(in: managedLibraryDirectory)
             let books = try modelContext.fetch(FetchDescriptor<Book>())
             for state in states {
