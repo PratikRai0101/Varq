@@ -38,6 +38,57 @@ struct ImportViewModelTests {
         #expect(viewModel.importErrors.first?.message == "This book is already in your library.")
     }
 
+    @Test func importsReadableNestedBooksAndReportsAllPartialFailures() async throws {
+        let library = temporaryLibraryDirectory()
+        let folder = temporaryLibraryDirectory()
+        defer {
+            try? FileManager.default.removeItem(at: library)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let nested = folder.appendingPathComponent("nested")
+        try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+        let original = folder.appendingPathComponent("a.EPUB")
+        let duplicate = nested.appendingPathComponent("duplicate.epub")
+        try FileManager.default.copyItem(at: epubFixtureURL, to: original)
+        try FileManager.default.copyItem(at: epubFixtureURL, to: duplicate)
+        try Data("not a PDF".utf8).write(to: nested.appendingPathComponent("broken.pdf"))
+        try Data("unrelated".utf8).write(to: folder.appendingPathComponent("readme.txt"))
+        let manager = FolderTestDirectoryEnumerator()
+        manager.inaccessibleURL = folder.appendingPathComponent("unreadable")
+        let scope = FolderTestSecurityScope()
+        let context = try modelContext()
+        let viewModel = ImportViewModel(
+            importer: ImportService(libraryDirectory: library),
+            folderImportService: FolderImportService(directoryEnumerator: manager, securityScope: scope)
+        )
+
+        await viewModel.importDirectory(folder, into: context)
+
+        #expect(try context.fetchCount(FetchDescriptor<Book>()) == 1)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: library.path).count == 1)
+        #expect(Set(viewModel.importErrors.map(\.fileName)) == ["duplicate.epub", "broken.pdf", "unreadable"])
+        #expect(viewModel.importErrors.contains { $0.message == "This book is already in your library." })
+        let expected = try Data(contentsOf: epubFixtureURL)
+        #expect(try Data(contentsOf: original) == expected)
+        #expect(try Data(contentsOf: duplicate) == expected)
+        #expect(scope.started == [folder])
+        #expect(scope.stopped == [folder])
+    }
+
+    @Test func reportsAnUnavailableFolderInsteadOfSilentlyDoingNothing() async throws {
+        let library = temporaryLibraryDirectory()
+        defer { try? FileManager.default.removeItem(at: library) }
+        let context = try modelContext()
+        let viewModel = ImportViewModel(importer: ImportService(libraryDirectory: library))
+        let missing = temporaryLibraryDirectory().appendingPathComponent("Missing folder")
+
+        await viewModel.importDirectory(missing, into: context)
+
+        #expect(viewModel.importErrors.count == 1)
+        #expect(viewModel.importErrors.first?.fileName == "Missing folder")
+        #expect(try context.fetchCount(FetchDescriptor<Book>()) == 0)
+    }
+
     @Test func pickerContentTypesExcludeCbr() {
         let fileExtensions = Set(ImportViewModel.supportedContentTypes.compactMap(\.preferredFilenameExtension))
 

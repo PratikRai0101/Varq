@@ -25,6 +25,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] `ImportService`: EPUB import via the native EPUB parser, extract title/author/cover
 - [x] `ImportService`: PDF import via PDFKit
 - [x] `ImportService`: CBZ import (archive extraction + first-page-as-cover)
+- [x] Hold chosen-folder access through nested imports and report partial discovery failures
 - CBR import is deferred to v1.1+; see the CBR deferral decision in `docs/PRD.md` section 8.
 - [x] Duplicate detection via content hash
 - [x] Drag-and-drop target on LibraryView + `NSOpenPanel` fallback

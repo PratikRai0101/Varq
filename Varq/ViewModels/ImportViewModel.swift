@@ -29,13 +29,16 @@ final class ImportViewModel {
     private(set) var importErrors: [ImportFileError] = []
     private let importer: ImportService
     private let duplicateDetectionService: DuplicateDetectionService
+    private let folderImportService: FolderImportService
 
     init(
         importer: ImportService,
-        duplicateDetectionService: DuplicateDetectionService? = nil
+        duplicateDetectionService: DuplicateDetectionService? = nil,
+        folderImportService: FolderImportService? = nil
     ) {
         self.importer = importer
         self.duplicateDetectionService = duplicateDetectionService ?? DuplicateDetectionService()
+        self.folderImportService = folderImportService ?? FolderImportService()
     }
 
     func dismissImportErrors() {
@@ -44,25 +47,25 @@ final class ImportViewModel {
 
     func chooseFiles(allowDirectories: Bool = false) -> [URL] {
         let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = true
+        panel.allowsMultipleSelection = !allowDirectories
+        panel.canChooseFiles = !allowDirectories
         panel.canChooseDirectories = allowDirectories
-        panel.allowedContentTypes = Self.supportedContentTypes
+        panel.allowedContentTypes = allowDirectories ? [.folder] : Self.supportedContentTypes
         return panel.runModal() == .OK ? panel.urls : []
     }
 
     func importDirectory(_ directoryURL: URL, into context: ModelContext) async {
-        let fileManager = FileManager.default
-        guard let enumerator = fileManager.enumerator(at: directoryURL, includingPropertiesForKeys: nil) else {
-            return
-        }
-        var urls: [URL] = []
-        for case let fileURL as URL in enumerator {
-            let ext = fileURL.pathExtension.lowercased()
-            if [BookFormat.epub.rawValue, BookFormat.pdf.rawValue, BookFormat.cbz.rawValue].contains(ext) {
-                urls.append(fileURL)
+        importErrors = []
+        do {
+            try await folderImportService.withBooks(in: directoryURL) { discovery in
+                await importFiles(discovery.files, into: context)
+                importErrors.append(contentsOf: discovery.issues.map {
+                    ImportFileError(fileName: $0.url.lastPathComponent, message: $0.message)
+                })
             }
+        } catch {
+            importErrors.append(ImportFileError(fileName: directoryURL.lastPathComponent, message: error.localizedDescription))
         }
-        await importFiles(urls, into: context)
     }
 
     func importDroppedFiles(_ providers: [NSItemProvider], into context: ModelContext) async {
