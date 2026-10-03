@@ -4,17 +4,12 @@ import Foundation
 struct PrivateBookCryptoService {
     func encryptManagedFile(at fileURL: URL, using key: SymmetricKey) throws {
         let plaintext = try Data(contentsOf: fileURL)
-        let sealedBox = try AES.GCM.seal(plaintext, using: key)
-        guard let ciphertext = sealedBox.combined else {
-            throw PrivateBookCryptoError.missingCombinedRepresentation
-        }
-        try replaceFile(at: fileURL, with: ciphertext)
+        try replaceFile(at: fileURL, with: encrypt(plaintext, using: key))
     }
 
     func decryptReplacingManagedFile(at encryptedFileURL: URL, using key: SymmetricKey) throws {
         let ciphertext = try Data(contentsOf: encryptedFileURL)
-        let sealedBox = try AES.GCM.SealedBox(combined: ciphertext)
-        try replaceFile(at: encryptedFileURL, with: AES.GCM.open(sealedBox, using: key))
+        try replaceFile(at: encryptedFileURL, with: decrypt(ciphertext, using: key))
     }
 
     func decryptManagedFile(at encryptedFileURL: URL, to destinationURL: URL, using key: SymmetricKey) throws {
@@ -26,6 +21,18 @@ struct PrivateBookCryptoService {
             withIntermediateDirectories: true
         )
         try plaintext.write(to: destinationURL, options: .atomic)
+    }
+
+    func encrypt(_ plaintext: Data, using key: SymmetricKey) throws -> Data {
+        let sealedBox = try AES.GCM.seal(plaintext, using: key)
+        guard let ciphertext = sealedBox.combined else {
+            throw PrivateBookCryptoError.missingCombinedRepresentation
+        }
+        return ciphertext
+    }
+
+    func decrypt(_ ciphertext: Data, using key: SymmetricKey) throws -> Data {
+        try AES.GCM.open(AES.GCM.SealedBox(combined: ciphertext), using: key)
     }
 
     private func replaceFile(at fileURL: URL, with data: Data) throws {

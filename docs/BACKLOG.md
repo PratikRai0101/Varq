@@ -63,7 +63,9 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] Mark-as-private UI flow
 - [x] CryptoKit encryption at rest + Keychain-stored key with biometric access control
 - [x] Preserve private-book file/key state across database-save failures and report rollback/cleanup failures
-- [ ] Add persistent recovery state and startup reconciliation for interrupted private-book protection changes
+- [x] Add persistent recovery state and startup reconciliation for interrupted private-book protection changes
+- [ ] Verify protection-change crash recovery and multi-window blocking in a signed sandboxed build
+- [ ] Remove stale private-reader plaintext session files after abnormal termination
 - [x] Session-based unlock behavior
 - [x] Manual security review pass before considering this feature complete — this is the highest-stakes feature in the app from a trust standpoint
 

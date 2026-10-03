@@ -8,7 +8,6 @@ struct LibraryView: View {
     @Environment(\.varqDarkTheme) private var darkTheme
     @State private var libraryViewModel = LibraryViewModel()
     @State private var isDropTargeted = false
-    @State private var privateBookViewModel = PrivateBookViewModel()
     @State private var bookToDelete: Book?
     @State private var bookToRename: Book?
     @State private var renameTitle = ""
@@ -24,18 +23,26 @@ struct LibraryView: View {
     @State private var obsidianVaultExportViewModel = ObsidianVaultExportViewModel()
 
     let importViewModel: ImportViewModel
+    let privateBookViewModel: PrivateBookViewModel
     let managedLibraryDirectory: URL
 
     var body: some View {
         @Bindable var libraryViewModel = libraryViewModel
 
-        NavigationSplitView {
-            sidebar
-        } detail: {
-            libraryGrid
+        Group {
+            if privateBookViewModel.isRecoveryComplete {
+                NavigationSplitView {
+                    sidebar
+                } detail: {
+                    libraryGrid
+                }
+            } else {
+                protectionRecoveryView
+            }
         }
-        .task { reloadLibrary() }
+        .task { recoverLibraryProtection() }
         .onDrop(of: ImportViewModel.supportedContentTypeIdentifiers, isTargeted: $isDropTargeted) { providers in
+            guard privateBookViewModel.isRecoveryComplete else { return false }
             Task {
                 await importViewModel.importDroppedFiles(providers, into: modelContext)
                 reloadLibrary()
@@ -95,6 +102,35 @@ struct LibraryView: View {
         }
         .sheet(isPresented: $isCollectionEditorPresented) {
             collectionEditorView
+        }
+    }
+
+    private var protectionRecoveryView: some View {
+        VStack(spacing: VarqSpacing.regular) {
+            Image(systemName: "lock")
+                .font(VarqTypography.ui(.largeTitle))
+            Text("Book protection recovery")
+                .font(VarqTypography.uiMedium(.title2))
+            Text(privateBookViewModel.errorMessage ?? "Varq checks interrupted protection changes before opening your library.")
+                .font(VarqTypography.ui(.body))
+                .multilineTextAlignment(.center)
+            Button("Retry recovery") { recoverLibraryProtection() }
+                .buttonStyle(.borderedProminent)
+                .tint(colorScheme == .dark ? darkTheme.accent : Color.varqTerracotta)
+        }
+        .foregroundStyle(libraryForegroundColor)
+        .padding(VarqSpacing.large)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(libraryBackgroundColor)
+    }
+
+    private func recoverLibraryProtection() {
+        privateBookViewModel.recoverInterruptedChanges(
+            using: modelContext,
+            managedLibraryDirectory: managedLibraryDirectory
+        )
+        if privateBookViewModel.isRecoveryComplete {
+            reloadLibrary()
         }
     }
 

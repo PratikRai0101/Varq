@@ -3,6 +3,7 @@ import Foundation
 import Testing
 @testable import Varq
 
+@MainActor
 struct PrivateBookProtectionServiceTests {
     @Test func failedUnprotectSaveKeepsTheBookEncryptedAndItsKeyUsable() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -15,6 +16,7 @@ struct PrivateBookProtectionServiceTests {
         let keyStore = FakePrivateBookKeyStore()
         let service = PrivateBookProtectionService(keyStore: keyStore)
         _ = try service.protect(bookID: bookID, managedFileURL: fileURL)
+        try service.completeProtection(bookID: bookID, managedFileURL: fileURL)
 
         #expect(throws: TestPersistenceError.saveFailed) {
             try service.unprotect(bookID: bookID, managedFileURL: fileURL) {
@@ -39,6 +41,7 @@ struct PrivateBookProtectionServiceTests {
         let keyStore = FakePrivateBookKeyStore()
         let service = PrivateBookProtectionService(keyStore: keyStore)
         _ = try service.protect(bookID: bookID, managedFileURL: fileURL)
+        try service.completeProtection(bookID: bookID, managedFileURL: fileURL)
 
         try service.unprotect(bookID: bookID, managedFileURL: fileURL) {
             #expect(try Data(contentsOf: fileURL) == plaintext)
@@ -59,28 +62,34 @@ struct PrivateBookProtectionServiceTests {
         let keyStore = FakePrivateBookKeyStore()
         let service = PrivateBookProtectionService(keyStore: keyStore)
         _ = try service.protect(bookID: bookID, managedFileURL: fileURL)
+        try service.completeProtection(bookID: bookID, managedFileURL: fileURL)
 
         do {
             try service.unprotect(bookID: bookID, managedFileURL: fileURL) {
-                // Simulate a filesystem failure at rollback by making the managed
-                // path unavailable after decryption, without discarding its data.
-                try FileManager.default.moveItem(at: fileURL, to: directory.appendingPathComponent("recovery.epub"))
+                // Simulate an unsafe rollback destination without losing the
+                // decrypted data. Recovery must not follow this symlink.
+                let recoveryURL = directory.appendingPathComponent("recovery.epub")
+                try FileManager.default.moveItem(at: fileURL, to: recoveryURL)
+                try FileManager.default.createSymbolicLink(at: fileURL, withDestinationURL: recoveryURL)
                 throw TestPersistenceError.saveFailed
             }
             Issue.record("Expected a failed rollback")
         } catch let PrivateBookProtectionError.rollbackFailed(operationError, rollbackError) {
             #expect(operationError as? TestPersistenceError == .saveFailed)
-            #expect((rollbackError as NSError).domain == NSCocoaErrorDomain)
+            #expect(rollbackError as? PrivateBookRecoveryError == .unsafePath)
         }
 
         _ = try keyStore.key(for: bookID, authenticationPrompt: "Test")
     }
 
-    @Test func encryptionFailureDoesNotSilentlyHideKeyCleanupFailure() throws {
+    @Test func protectionFailureDoesNotSilentlyHideKeyCleanupFailure() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let fileURL = directory.appendingPathComponent("missing.epub")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let fileURL = directory.appendingPathComponent("book.epub")
+        try Data("private book content".utf8).write(to: fileURL)
         let keyStore = FakePrivateBookKeyStore()
+        keyStore.storeError = TestPersistenceError.keyStoreFailed
         keyStore.removalError = TestPersistenceError.keyCleanupFailed
         let service = PrivateBookProtectionService(keyStore: keyStore)
 
@@ -88,7 +97,7 @@ struct PrivateBookProtectionServiceTests {
             _ = try service.protect(bookID: UUID(), managedFileURL: fileURL)
             Issue.record("Expected encryption and cleanup failures")
         } catch let PrivateBookProtectionError.rollbackFailed(operationError, rollbackError) {
-            #expect((operationError as NSError).domain == NSCocoaErrorDomain)
+            #expect(operationError as? TestPersistenceError == .keyStoreFailed)
             #expect(rollbackError as? TestPersistenceError == .keyCleanupFailed)
         }
     }
@@ -117,12 +126,17 @@ struct PrivateBookProtectionServiceTests {
 private enum TestPersistenceError: Error {
     case saveFailed
     case keyCleanupFailed
+    case keyStoreFailed
 }
 
 private final class FakePrivateBookKeyStore: PrivateBookKeyStoring {
     var keys: [UUID: SymmetricKey] = [:]
     var removalError: (any Error)?
-    func store(_ key: SymmetricKey, for bookID: UUID) throws { keys[bookID] = key }
+    var storeError: (any Error)?
+    func store(_ key: SymmetricKey, for bookID: UUID) throws {
+        if let storeError { throw storeError }
+        keys[bookID] = key
+    }
     func key(for bookID: UUID, authenticationPrompt: String) throws -> SymmetricKey {
         guard let key = keys[bookID] else { throw PrivateBookKeyStoreError.keychainStatus(-1) }
         return key

@@ -14,6 +14,7 @@ struct VarqApp: App {
     @AppStorage(AppSettingsKey.appearance) private var appearanceRawValue = AppAppearance.system.rawValue
 
     let importViewModel: ImportViewModel
+    let privateBookViewModel: PrivateBookViewModel
     let managedLibraryDirectory: URL
 
     var sharedModelContainer: ModelContainer = {
@@ -46,6 +47,7 @@ struct VarqApp: App {
             .appendingPathComponent("Varq", isDirectory: true)
             .appendingPathComponent("Library", isDirectory: true)
         importViewModel = ImportViewModel(importer: ImportService(libraryDirectory: managedLibraryDirectory))
+        privateBookViewModel = PrivateBookViewModel()
 
     }
 
@@ -53,6 +55,7 @@ struct VarqApp: App {
         WindowGroup {
             ContentView(
                 importViewModel: importViewModel,
+                privateBookViewModel: privateBookViewModel,
                 managedLibraryDirectory: managedLibraryDirectory
             )
             .environment(\.varqDarkTheme, darkTheme)

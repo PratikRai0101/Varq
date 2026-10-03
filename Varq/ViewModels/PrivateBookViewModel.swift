@@ -8,6 +8,7 @@ final class PrivateBookViewModel {
     private let protectionService: any PrivateBookProtecting
     private let saveChanges: (ModelContext) throws -> Void
     private(set) var errorMessage: String?
+    private(set) var isRecoveryComplete = false
 
     init(
         protectionService: (any PrivateBookProtecting)? = nil,
@@ -15,6 +16,33 @@ final class PrivateBookViewModel {
     ) {
         self.protectionService = protectionService ?? PrivateBookProtectionService()
         self.saveChanges = saveChanges
+    }
+
+    func recoverInterruptedChanges(using modelContext: ModelContext, managedLibraryDirectory: URL) {
+        isRecoveryComplete = false
+        do {
+            let states = try protectionService.recoverableChanges(in: managedLibraryDirectory)
+            let books = try modelContext.fetch(FetchDescriptor<Book>())
+            for state in states {
+                guard let book = books.first(where: { $0.id == state.record.bookID }),
+                      book.libraryRelativePath == state.record.fileName else {
+                    throw PrivateBookRecoveryError.missingBook
+                }
+                let previousFlag = book.isPrivate
+                book.isPrivate = state.isPrivate
+                do {
+                    try saveChanges(modelContext)
+                } catch {
+                    book.isPrivate = previousFlag
+                    throw error
+                }
+                try protectionService.completeRecovery(state, in: managedLibraryDirectory)
+            }
+            errorMessage = nil
+            isRecoveryComplete = true
+        } catch {
+            errorMessage = "Varq could not finish book protection recovery. " + error.localizedDescription
+        }
     }
 
     func markPrivate(book: Book, managedFileURL: URL, using modelContext: ModelContext) {
@@ -31,10 +59,14 @@ final class PrivateBookViewModel {
                     try protectionService.rollbackProtection(handle, bookID: book.id, managedFileURL: managedFileURL)
                     book.isPrivate = false
                 } catch {
-                    // A cleanup failure means decryption succeeded. Otherwise keep the
-                    // private flag rather than presenting an encrypted file as public.
-                    if case PrivateBookProtectionError.keyCleanupFailed = error {
+                    // Cleanup errors occur after restoring the public file.
+                    // Other failures may have left the file encrypted.
+                    switch error {
+                    case PrivateBookProtectionError.keyCleanupFailed,
+                         PrivateBookProtectionError.rollbackCleanupFailed:
                         book.isPrivate = false
+                    default:
+                        break
                     }
                     throw PrivateBookProtectionError.rollbackFailed(
                         operationError: persistenceError,
@@ -43,7 +75,11 @@ final class PrivateBookViewModel {
                 }
                 throw persistenceError
             }
+            // Journal cleanup is outside the save/rollback block: a cleanup
+            // failure must never roll back an already committed private flag.
+            try protectionService.completeProtection(bookID: book.id, managedFileURL: managedFileURL)
         } catch {
+            isRecoveryComplete = false
             errorMessage = error.localizedDescription
         }
     }
@@ -62,11 +98,14 @@ final class PrivateBookViewModel {
             }
             errorMessage = nil
         } catch {
+            isRecoveryComplete = false
             errorMessage = error.localizedDescription
         }
     }
 
     func clearError() {
+        // Dismissing an alert must not erase the blocking recovery diagnosis.
+        guard isRecoveryComplete else { return }
         errorMessage = nil
     }
 }

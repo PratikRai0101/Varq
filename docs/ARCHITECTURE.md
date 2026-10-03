@@ -80,12 +80,14 @@ Book file handling must account for App Sandbox constraints — `ImportService` 
 
 ## Private shelf (Touch ID) implementation notes
 
-See `docs/adr/0006-encrypt-private-books-before-marking-them-private.md`: encryption and the private flag are one atomic workflow; a private managed copy is never plaintext at rest.
+See `docs/adr/0006-encrypt-private-books-before-marking-them-private.md`: protection is a journaled, rollback-capable workflow, not an atomic transaction across filesystem, Keychain, and SwiftData.
 
-1. `BiometricGateService` wraps `LAContext.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics)`
-2. On marking a book private: generate a symmetric key via CryptoKit, encrypt the book's file content at rest, store the key in Keychain with `kSecAttrAccessControl` requiring biometric presence
-3. On access attempt: prompt Touch ID → on success, decrypt into a temporary in-memory buffer for the reader engine to read from (avoid writing decrypted plaintext back to disk)
-4. Session-based unlock: once unlocked, keep the private shelf visible/accessible for the remainder of the app session (or a configurable timeout) rather than re-prompting per book
+1. `BiometricGateService` wraps system authentication; the Keychain key has its own access-control protection.
+2. On marking a book private: prepare AES-GCM ciphertext in memory, persist a checksummed hash-based recovery record, store the symmetric key in Keychain, atomically replace the managed file, then save the private flag and finish the journal.
+3. On unmarking private: authenticate, journal and replace the file, save the public flag, then remove the key. Failed saves restore the exact original ciphertext; unsuccessful rollback or cleanup is reported and retains recovery state.
+4. At startup, `PrivateBookViewModel` coordinates `PrivateBookProtectionService` and `PrivateBookRecoveryJournalService` to save flags matching verified file hashes before clearing records or unused keys. The ViewModel is shared across windows; an unresolved record blocks library access and exports. Recovery never guesses an unknown file state or prompts for authentication.
+5. On reader access: authenticate and decrypt into a session temporary directory for the native reader engine. These plaintext files are removed at reader close, not written back to the managed library. Abnormal-session cleanup is a separate security follow-up.
+6. Session-based unlock: retain reader keys for the app session rather than re-prompting per book.
 
 ## Export pipeline
 
