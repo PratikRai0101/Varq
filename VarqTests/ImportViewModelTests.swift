@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import Testing
+import UniformTypeIdentifiers
 @testable import Varq
 
 @MainActor
