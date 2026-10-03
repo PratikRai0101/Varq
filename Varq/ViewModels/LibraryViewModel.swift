@@ -31,11 +31,18 @@ final class LibraryViewModel {
     }
 
     private let saveChanges: (ModelContext) throws -> Void
+    private let deletionService: BookDeletionService
 
-    init(saveChanges: @escaping (ModelContext) throws -> Void = { try $0.save() }) {
+    init(
+        deletionService: BookDeletionService? = nil,
+        saveChanges: @escaping (ModelContext) throws -> Void = { try $0.save() }
+    ) {
+        self.deletionService = deletionService ?? BookDeletionService()
         self.saveChanges = saveChanges
     }
 
+    private(set) var deletionError: String?
+    private(set) var isDeletionRecoveryRequired = false
     private(set) var metadataRefreshError: String?
     private(set) var books: [Book] = []
     private(set) var allBooks: [Book] = []
@@ -45,6 +52,46 @@ final class LibraryViewModel {
     }
     var selectedCollection: BookCollection? = nil {
         didSet { applyFilter() }
+    }
+
+    func deleteBook(_ book: Book, managedLibraryDirectory: URL, using context: ModelContext) {
+        deletionError = nil
+        let deletionContext = ModelContext(context.container)
+        deletionContext.autosaveEnabled = false
+        do {
+            // Persist pending reading artifacts before deleting in an isolated context.
+            if context.hasChanges { try saveChanges(context) }
+            let persistedBooks = try deletionContext.fetch(FetchDescriptor<Book>())
+            guard let target = persistedBooks.first(where: { $0.id == book.id }),
+                  persistedBooks.filter({ $0.id == book.id }).count == 1,
+                  target.libraryRelativePath == book.libraryRelativePath,
+                  !persistedBooks.contains(where: { $0.id != book.id && $0.libraryRelativePath == target.libraryRelativePath }) else {
+                throw BookDeletionError.invalidJournal
+            }
+            let record = try deletionService.stage(bookID: target.id, fileName: target.libraryRelativePath, isPrivate: target.isPrivate, in: managedLibraryDirectory)
+            deletionContext.delete(target)
+            do {
+                try saveChanges(deletionContext)
+            } catch {
+                let saveError = error
+                // Autosave is disabled; discard this deletion-only context on failure.
+                do { try deletionService.restore(record, in: managedLibraryDirectory) }
+                catch { throw BookDeletionError.rollbackFailed(operation: saveError, rollback: error) }
+                throw saveError
+            }
+            do { try deletionService.complete(record, in: managedLibraryDirectory) }
+            catch { throw BookDeletionError.cleanupFailed(error) }
+            try load(using: context)
+            isDeletionRecoveryRequired = false
+        } catch {
+            deletionError = error.localizedDescription
+            do { isDeletionRecoveryRequired = !(try deletionService.pendingRecords(in: managedLibraryDirectory)).isEmpty }
+            catch { isDeletionRecoveryRequired = true }
+        }
+    }
+
+    func clearDeletionError() {
+        deletionError = nil
     }
 
     func clearMetadataRefreshError() {

@@ -36,6 +36,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] Empty state (no books imported yet) matching design system voice/tone
 - [x] Sort controls (title, author, date added, recently read)
 - [x] Refresh EPUB/PDF metadata with the correct local parser and preserve existing metadata on failure
+- [x] Journal managed-book deletion and recover file/save/key failures without losing surviving reading artifacts
 
 ## Phase 5 — Reader view core
 - [x] `ReaderViewModel`: coordinates the reader engine, exposes current reading locator/position

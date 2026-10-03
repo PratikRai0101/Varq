@@ -78,6 +78,10 @@ Book file handling must account for App Sandbox constraints — `ImportService` 
 5. Compute a content hash for duplicate detection before finalizing the import
 6. Copy the file into the app's sandboxed container (`Application Support/Varq/Library/`) — do not rely on the original file staying in place, since the user may move or delete it
 
+## Book deletion
+
+See `docs/adr/0010-journal-managed-book-deletions.md`. `LibraryViewModel` stages the managed file through `BookDeletionService`, saves deletion and cascaded artifacts in an isolated autosave-disabled context, then removes the staged file and private key. Failed saves restore the exact file; failed restoration/cleanup retains the checksummed journal and closes the app-shared recovery gate. Startup uses committed rows to choose restoration versus cleanup before protection recovery. The view only dispatches the operation and displays errors.
+
 ## Private shelf (Touch ID) implementation notes
 
 See `docs/adr/0006-encrypt-private-books-before-marking-them-private.md`: protection is a journaled, rollback-capable workflow, not an atomic transaction across filesystem, Keychain, and SwiftData.

@@ -8,23 +8,31 @@ final class PrivateBookViewModel {
     private let protectionService: any PrivateBookProtecting
     private let saveChanges: (ModelContext) throws -> Void
     private let readerSessionStorage: ReaderSessionStorageService
+    private let deletionService: BookDeletionService
     private(set) var errorMessage: String?
     private(set) var isRecoveryComplete = false
 
     init(
         protectionService: (any PrivateBookProtecting)? = nil,
         readerSessionStorage: ReaderSessionStorageService? = nil,
+        deletionService: BookDeletionService? = nil,
         saveChanges: @escaping (ModelContext) throws -> Void = { try $0.save() }
     ) {
         self.protectionService = protectionService ?? PrivateBookProtectionService()
         self.saveChanges = saveChanges
         self.readerSessionStorage = readerSessionStorage ?? .shared
+        self.deletionService = deletionService ?? BookDeletionService()
     }
 
     func recoverInterruptedChanges(using modelContext: ModelContext, managedLibraryDirectory: URL) {
         isRecoveryComplete = false
         do {
             try readerSessionStorage.cleanupStaleSessions()
+            // Reconcile against committed rows, never stale objects from a failed
+            // deletion or unrelated unsaved edits in a window's context.
+            let persistedContext = ModelContext(modelContext.container)
+            persistedContext.autosaveEnabled = false
+            try deletionService.recover(in: managedLibraryDirectory, survivingBooks: persistedContext.fetch(FetchDescriptor<Book>()))
             let states = try protectionService.recoverableChanges(in: managedLibraryDirectory)
             let books = try modelContext.fetch(FetchDescriptor<Book>())
             for state in states {
@@ -45,7 +53,7 @@ final class PrivateBookViewModel {
             errorMessage = nil
             isRecoveryComplete = true
         } catch {
-            errorMessage = "Varq could not finish book protection recovery. " + error.localizedDescription
+            errorMessage = "Varq could not finish library recovery. " + error.localizedDescription
         }
     }
 
@@ -105,6 +113,11 @@ final class PrivateBookViewModel {
             isRecoveryComplete = false
             errorMessage = error.localizedDescription
         }
+    }
+
+    func requireDeletionRecovery(_ message: String) {
+        isRecoveryComplete = false
+        errorMessage = message
     }
 
     func clearError() {

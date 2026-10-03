@@ -81,6 +81,11 @@ struct LibraryView: View {
         } message: {
             Text(privateBookViewModel.errorMessage ?? "An unknown error occurred.")
         }
+        .alert("Book deletion", isPresented: deletionErrorIsPresented) {
+            Button("OK", role: .cancel, action: libraryViewModel.clearDeletionError)
+        } message: {
+            Text(libraryViewModel.deletionError ?? "The book could not be deleted.")
+        }
         .alert("Metadata refresh", isPresented: metadataRefreshAlertIsPresented) {
             Button("OK", role: .cancel, action: libraryViewModel.clearMetadataRefreshError)
         } message: {
@@ -114,9 +119,9 @@ struct LibraryView: View {
         VStack(spacing: VarqSpacing.regular) {
             Image(systemName: "lock")
                 .font(VarqTypography.ui(.largeTitle))
-            Text("Book protection recovery")
+            Text("Library recovery")
                 .font(VarqTypography.uiMedium(.title2))
-            Text(privateBookViewModel.errorMessage ?? "Varq cleans abandoned reader files and checks interrupted protection changes before opening your library.")
+            Text(privateBookViewModel.errorMessage ?? "Varq recovers interrupted deletions and protection changes and cleans abandoned reader files before opening your library.")
                 .font(VarqTypography.ui(.body))
                 .multilineTextAlignment(.center)
             Button("Retry recovery") { recoverLibraryProtection() }
@@ -549,16 +554,22 @@ struct LibraryView: View {
         reloadLibrary()
     }
 
+    private var deletionErrorIsPresented: Binding<Bool> {
+        Binding(
+            get: { libraryViewModel.deletionError != nil },
+            set: { isPresented in
+                if !isPresented { libraryViewModel.clearDeletionError() }
+            }
+        )
+    }
+
     private func performDelete() {
         guard let book = bookToDelete else { return }
-        let fileURL = bookURL(for: book)
-
-        modelContext.delete(book)
-        try? modelContext.save()
-        try? FileManager.default.removeItem(at: fileURL)
-
+        libraryViewModel.deleteBook(book, managedLibraryDirectory: managedLibraryDirectory, using: modelContext)
+        if libraryViewModel.isDeletionRecoveryRequired {
+            privateBookViewModel.requireDeletionRecovery(libraryViewModel.deletionError ?? "Book deletion needs recovery.")
+        }
         bookToDelete = nil
-        reloadLibrary()
     }
 
     private func chooseFiles() {
