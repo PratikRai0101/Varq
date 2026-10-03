@@ -41,6 +41,8 @@ Before journal reconciliation or library access, startup attempts cleanup under 
 
 Unknown entries, missing leases in nonempty directories, unsafe paths, and I/O failures preserve unresolved artifacts and block startup through the existing shared recovery screen. Reader-close deletion failures remain tracked and are retried before more temporary files can be allocated. Renderer close remains nonthrowing; a failed release is reported by the next allocation or startup cleanup rather than silently forgotten. Legacy UUID directories outside this new owned namespace lack reliable ownership markers and are deliberately not bulk-deleted.
 
+The repeatable signed-sandbox forced-quit probe and its remaining UI/authentication coverage limits are documented in `docs/verification/private-reader-cleanup.md`.
+
 ## Limits
 
 - File replacement and journal completion markers are atomic operations, not a single transaction across filesystem, Keychain, and SwiftData. Recovery covers app-process termination at journaled boundaries; it is not a guarantee against disk failure or sudden power loss.

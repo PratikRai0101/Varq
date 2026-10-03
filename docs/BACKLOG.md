@@ -66,7 +66,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] Add persistent recovery state and startup reconciliation for interrupted private-book protection changes
 - [ ] Verify protection-change crash recovery and multi-window blocking in a signed sandboxed build
 - [x] Remove stale private-reader plaintext session files after abnormal termination
-- [ ] Verify stale-reader cleanup after a forced quit in a signed sandboxed build
+- [x] Verify stale-reader cleanup after a forced quit in a signed sandboxed build — isolated production-service probe; see `docs/verification/private-reader-cleanup.md` for coverage and remaining manual UI checks
 - [x] Session-based unlock behavior
 - [x] Manual security review pass before considering this feature complete — this is the highest-stakes feature in the app from a trust standpoint
 
