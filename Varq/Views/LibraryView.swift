@@ -67,7 +67,7 @@ struct LibraryView: View {
         } message: {
             Text("Edit the title and author for this book.")
         }
-        .alert("Could not mark as private", isPresented: $isPrivateBookErrorPresented) {
+        .alert("Book protection", isPresented: $isPrivateBookErrorPresented) {
             Button("OK", role: .cancel) {
                 privateBookViewModel.clearError()
             }
