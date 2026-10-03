@@ -30,6 +30,13 @@ final class LibraryViewModel {
         }
     }
 
+    private let saveChanges: (ModelContext) throws -> Void
+
+    init(saveChanges: @escaping (ModelContext) throws -> Void = { try $0.save() }) {
+        self.saveChanges = saveChanges
+    }
+
+    private(set) var metadataRefreshError: String?
     private(set) var books: [Book] = []
     private(set) var allBooks: [Book] = []
     private(set) var collections: [BookCollection] = []
@@ -38,6 +45,46 @@ final class LibraryViewModel {
     }
     var selectedCollection: BookCollection? = nil {
         didSet { applyFilter() }
+    }
+
+    func clearMetadataRefreshError() {
+        metadataRefreshError = nil
+    }
+
+    func refreshMetadata(for book: Book, managedFileURL: URL, using context: ModelContext) async {
+        metadataRefreshError = nil
+        do {
+            guard !book.isPrivate else { throw LibraryMetadataRefreshError.privateBook }
+            let metadata: (title: String, author: String, coverImageData: Data?)
+            switch book.format {
+            case .pdf:
+                let pdf = try await PDFParserService().parse(at: managedFileURL, fallbackTitle: book.title)
+                metadata = (pdf.title, pdf.author, pdf.coverImageData)
+            case .epub:
+                let epub = try await EpubParserService().parse(at: managedFileURL)
+                metadata = (epub.title, epub.author, epub.coverImageData)
+            case .cbz, .cbr:
+                throw LibraryMetadataRefreshError.unsupportedFormat
+            }
+            // Protection can change while the parser actor is running.
+            guard !book.isPrivate else { throw LibraryMetadataRefreshError.privateBook }
+            let original = (title: book.title, author: book.author, coverImageData: book.coverImageData)
+            book.title = metadata.title
+            book.author = metadata.author
+            book.coverImageData = metadata.coverImageData
+            do {
+                try saveChanges(context)
+            } catch {
+                // Restore only this refresh's fields, not unrelated context edits.
+                book.title = original.title
+                book.author = original.author
+                book.coverImageData = original.coverImageData
+                throw error
+            }
+            try load(using: context)
+        } catch {
+            metadataRefreshError = error.localizedDescription
+        }
     }
 
     func load(using context: ModelContext) throws {
@@ -159,6 +206,18 @@ final class LibraryViewModel {
             case .dateAdded: lhs.dateAdded > rhs.dateAdded
             case .recentlyRead: (lhs.readingProgress?.lastReadDate ?? .distantPast) > (rhs.readingProgress?.lastReadDate ?? .distantPast)
             }
+        }
+    }
+}
+
+enum LibraryMetadataRefreshError: LocalizedError {
+    case unsupportedFormat
+    case privateBook
+
+    var errorDescription: String? {
+        switch self {
+        case .unsupportedFormat: "Metadata refresh is supported for EPUB and PDF books only."
+        case .privateBook: "Unmark this book as private before refreshing its metadata."
         }
     }
 }

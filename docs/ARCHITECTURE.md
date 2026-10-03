@@ -73,7 +73,7 @@ Book file handling must account for App Sandbox constraints — `ImportService` 
 
 1. User drags a file in, or picks via `NSOpenPanel` (sandboxed-safe)
 2. `ImportService` detects format by extension + file signature (don't trust extension alone)
-3. For EPUB/PDF: the relevant native reader-engine component parses metadata (title, author, cover)
+3. For EPUB/PDF: `EpubParserService` and `PDFParserService` parse local metadata (title, author, cover). PDF import and library refresh share the same PDFKit-based parser and sanitization policy. `LibraryViewModel` routes refresh by `Book.format`, keeps the saved title when PDF title metadata is absent, and restores the refreshed fields if saving fails. Private-book refresh is refused without decrypting; parser/save errors are shown in the library.
 4. For CBZ/CBR: `ImportService` extracts the archive, treats each image as a page, derives a cover from the first image
 5. Compute a content hash for duplicate detection before finalizing the import
 6. Copy the file into the app's sandboxed container (`Application Support/Varq/Library/`) — do not rely on the original file staying in place, since the user may move or delete it

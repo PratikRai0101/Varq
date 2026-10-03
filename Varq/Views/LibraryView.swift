@@ -81,6 +81,11 @@ struct LibraryView: View {
         } message: {
             Text(privateBookViewModel.errorMessage ?? "An unknown error occurred.")
         }
+        .alert("Metadata refresh", isPresented: metadataRefreshAlertIsPresented) {
+            Button("OK", role: .cancel, action: libraryViewModel.clearMetadataRefreshError)
+        } message: {
+            Text(libraryViewModel.metadataRefreshError ?? "This book's metadata could not be refreshed.")
+        }
         .sheet(isPresented: $isSettingsPresented) {
             SettingsView()
         }
@@ -443,8 +448,16 @@ struct LibraryView: View {
 
         if book.format == .epub || book.format == .pdf {
             Button("Refresh metadata", systemImage: "arrow.clockwise") {
-                Task { await refreshMetadata(for: book) }
+                Task {
+                    await libraryViewModel.refreshMetadata(
+                        for: book,
+                        managedFileURL: bookURL(for: book),
+                        using: modelContext
+                    )
+                }
             }
+            .disabled(book.isPrivate)
+            .help(book.isPrivate ? "Unmark as private before refreshing metadata." : "Read title, author, and cover from the managed book file.")
         }
 
         Button("Rename", systemImage: "pencil") {
@@ -458,19 +471,13 @@ struct LibraryView: View {
         }
     }
 
-    private func refreshMetadata(for book: Book) async {
-        let fileURL = bookURL(for: book)
-        let parser = EpubParserService()
-        do {
-            let metadata = try await parser.parse(at: fileURL)
-            book.title = metadata.title
-            book.author = metadata.author
-            book.coverImageData = metadata.coverImageData
-            try? modelContext.save()
-            reloadLibrary()
-        } catch {
-            // Silently ignore refresh failures; the book keeps its old metadata.
-        }
+    private var metadataRefreshAlertIsPresented: Binding<Bool> {
+        Binding(
+            get: { libraryViewModel.metadataRefreshError != nil },
+            set: { isPresented in
+                if !isPresented { libraryViewModel.clearMetadataRefreshError() }
+            }
+        )
     }
 
     private var libraryForegroundColor: Color {

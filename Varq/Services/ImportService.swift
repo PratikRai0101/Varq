@@ -1,6 +1,4 @@
-import AppKit
 import Foundation
-import PDFKit
 import ZIPFoundation
 
 struct ImportedBook: Equatable, Sendable {
@@ -19,17 +17,20 @@ enum ImportServiceError: Error {
 actor ImportService {
     private let libraryDirectory: URL
     private let epubParser: EpubParserService
+    private let pdfParser: PDFParserService
     private let fileManager: FileManager
     private let contentHashService: ContentHashService
 
     init(
         libraryDirectory: URL,
         epubParser: EpubParserService = EpubParserService(),
+        pdfParser: PDFParserService = PDFParserService(),
         contentHashService: ContentHashService = ContentHashService(),
         fileManager: FileManager = .default
     ) {
         self.libraryDirectory = libraryDirectory
         self.epubParser = epubParser
+        self.pdfParser = pdfParser
         self.fileManager = fileManager
         self.contentHashService = contentHashService
     }
@@ -76,7 +77,10 @@ actor ImportService {
             }
         }
 
-        guard let document = PDFDocument(url: sourceURL) else {
+        let metadata: PDFMetadata
+        do {
+            metadata = try await pdfParser.parse(at: sourceURL)
+        } catch PDFParserError.invalidDocument {
             throw ImportServiceError.unsupportedFormat
         }
         try fileManager.createDirectory(at: libraryDirectory, withIntermediateDirectories: true)
@@ -86,14 +90,10 @@ actor ImportService {
         try fileManager.copyItem(at: sourceURL, to: destinationURL)
 
         let contentHash = try await contentHashService.hash(of: sourceURL)
-        let attributes = document.documentAttributes
-        let rawTitle = attributes?[PDFDocumentAttribute.titleAttribute] as? String
-        let rawAuthor = attributes?[PDFDocumentAttribute.authorAttribute] as? String
-        let fileNameTitle = sourceURL.deletingPathExtension().lastPathComponent
         return ImportedBook(
-            title: sanitizePDFMetadata(rawTitle, fallback: fileNameTitle),
-            author: sanitizePDFMetadata(rawAuthor, fallback: "Unknown Author"),
-            coverImageData: coverImageData(from: document),
+            title: metadata.title,
+            author: metadata.author,
+            coverImageData: metadata.coverImageData,
             libraryRelativePath: fileName,
             contentHash: contentHash,
             format: .pdf
@@ -149,35 +149,4 @@ actor ImportService {
         )
     }
 
-    private func coverImageData(from document: PDFDocument) -> Data? {
-        guard let page = document.page(at: 0),
-              let tiffData = page.thumbnail(of: CGSize(width: 300, height: 400), for: .mediaBox).tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiffData) else {
-            return nil
-        }
-        return bitmap.representation(using: .png, properties: [:])
-    }
-
-    private func sanitizePDFMetadata(_ value: String?, fallback: String) -> String {
-        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
-            return fallback
-        }
-        let lowercased = value.lowercased()
-        let garbagePatterns = [
-            "microsoft word", "untitled", "document", "preferred customer",
-            "unknown", "user", "admin", "author", "no author",
-            "created by", "pdf creator", "acrobat", "pdf generator"
-        ]
-        for pattern in garbagePatterns {
-            if lowercased.contains(pattern) {
-                return fallback
-            }
-        }
-        // If the title is suspiciously long and contains the filename pattern,
-        // it is likely auto-generated garbage.
-        if value.count > 80, lowercased.contains(" - ") || lowercased.contains("_") {
-            return fallback
-        }
-        return value
-    }
 }
