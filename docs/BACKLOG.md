@@ -70,7 +70,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] CryptoKit encryption at rest + Keychain-stored key with biometric access control
 - [x] Preserve private-book file/key state across database-save failures and report rollback/cleanup failures
 - [x] Add persistent recovery state and startup reconciliation for interrupted private-book protection changes
-- [ ] Verify protection-change crash recovery and multi-window blocking in a signed sandboxed build
+- [x] Verify protection-change crash recovery and multi-window blocking in a signed sandboxed build — nine forced-quit boundaries and two real production UI windows; see `docs/verification/protection-recovery.md` for evidence and authentication smoke-test limits
 - [x] Remove stale private-reader plaintext session files after abnormal termination
 - [x] Verify stale-reader cleanup after a forced quit in a signed sandboxed build — isolated production-service probe; see `docs/verification/private-reader-cleanup.md` for coverage and remaining manual UI checks
 - [x] Session-based unlock behavior

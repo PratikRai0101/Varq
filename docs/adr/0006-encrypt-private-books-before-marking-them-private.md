@@ -31,7 +31,7 @@ Before enabling the library, the app-shared `PrivateBookViewModel` reads pending
 
 An uncommitted replacement is removed only after verifying the managed copy. `.completed-<book ID>` directory names are atomic completion markers, allowing restart to finish interrupted recursive cleanup even if the record itself has already been deleted. Empty transaction directories left before record creation can also be removed safely.
 
-Save or key-cleanup failures retain pending recovery state for retry. Missing files, unknown content hashes, damaged/unsupported records, unsafe paths, and missing library entries block reading, library mutations, and exports in all windows. When the managed source is missing or unrecognized, staging is preserved rather than discarded. The recovery screen keeps its diagnosis when an alert is dismissed.
+Save or key-cleanup failures retain pending recovery state for retry. Missing files, unknown content hashes, damaged/unsupported records, unsafe paths, and missing library entries block reading, library mutations, and exports in all windows. When the managed source is missing or unrecognized, staging is preserved rather than discarded. The recovery screen keeps its diagnosis when an alert is dismissed. Repeatable signed-sandbox verification of nine process-interruption boundaries and two real production UI windows is documented in `docs/verification/protection-recovery.md`, including its authentication coverage limits.
 
 ## Reader-session cleanup
 
