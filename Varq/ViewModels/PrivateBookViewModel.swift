@@ -9,6 +9,8 @@ final class PrivateBookViewModel {
     private let saveChanges: (ModelContext) throws -> Void
     private let readerSessionStorage: ReaderSessionStorageService
     private let deletionService: BookDeletionService
+    private let importJournal: ImportRecoveryJournalService
+    private var isImporting: () -> Bool = { false }
     private(set) var errorMessage: String?
     private(set) var isRecoveryComplete = false
 
@@ -16,15 +18,23 @@ final class PrivateBookViewModel {
         protectionService: (any PrivateBookProtecting)? = nil,
         readerSessionStorage: ReaderSessionStorageService? = nil,
         deletionService: BookDeletionService? = nil,
+        importJournal: ImportRecoveryJournalService = ImportRecoveryJournalService(),
         saveChanges: @escaping (ModelContext) throws -> Void = { try $0.save() }
     ) {
         self.protectionService = protectionService ?? PrivateBookProtectionService()
         self.saveChanges = saveChanges
         self.readerSessionStorage = readerSessionStorage ?? .shared
         self.deletionService = deletionService ?? BookDeletionService()
+        self.importJournal = importJournal
+    }
+
+    func setImportActivityCheck(_ check: @escaping () -> Bool) {
+        isImporting = check
     }
 
     func recoverInterruptedChanges(using modelContext: ModelContext, managedLibraryDirectory: URL) {
+        // A new window or Retry must not reconcile an in-flight import as a crash.
+        guard !isImporting() else { return }
         isRecoveryComplete = false
         do {
             try readerSessionStorage.cleanupStaleSessions()
@@ -32,7 +42,11 @@ final class PrivateBookViewModel {
             // deletion or unrelated unsaved edits in a window's context.
             let persistedContext = ModelContext(modelContext.container)
             persistedContext.autosaveEnabled = false
-            try deletionService.recover(in: managedLibraryDirectory, survivingBooks: persistedContext.fetch(FetchDescriptor<Book>()))
+            let committedBooks = try persistedContext.fetch(FetchDescriptor<Book>())
+            try importJournal.recover(in: managedLibraryDirectory, committedBooks: committedBooks.map {
+                CommittedImportBook(id: $0.id, fileName: $0.libraryRelativePath, contentHash: $0.contentHash, isPrivate: $0.isPrivate)
+            })
+            try deletionService.recover(in: managedLibraryDirectory, survivingBooks: committedBooks)
             let states = try protectionService.recoverableChanges(in: managedLibraryDirectory)
             let books = try modelContext.fetch(FetchDescriptor<Book>())
             for state in states {
@@ -113,6 +127,11 @@ final class PrivateBookViewModel {
             isRecoveryComplete = false
             errorMessage = error.localizedDescription
         }
+    }
+
+    func requireImportRecovery(_ message: String) {
+        isRecoveryComplete = false
+        errorMessage = message
     }
 
     func requireDeletionRecovery(_ message: String) {

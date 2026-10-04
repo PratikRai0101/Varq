@@ -46,8 +46,16 @@ struct VarqApp: App {
         managedLibraryDirectory = applicationSupportDirectory
             .appendingPathComponent("Varq", isDirectory: true)
             .appendingPathComponent("Library", isDirectory: true)
-        importViewModel = ImportViewModel(importer: ImportService(libraryDirectory: managedLibraryDirectory))
-        privateBookViewModel = PrivateBookViewModel()
+        let recoveryViewModel = PrivateBookViewModel()
+        privateBookViewModel = recoveryViewModel
+        let importingViewModel = ImportViewModel(
+            importer: ImportService(libraryDirectory: managedLibraryDirectory),
+            onRecoveryRequired: { recoveryViewModel.requireImportRecovery($0) }
+        )
+        importViewModel = importingViewModel
+        recoveryViewModel.setImportActivityCheck { [weak importingViewModel] in
+            importingViewModel?.isImporting == true
+        }
 
     }
 

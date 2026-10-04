@@ -89,6 +89,41 @@ struct ImportViewModelTests {
         #expect(try context.fetchCount(FetchDescriptor<Book>()) == 0)
     }
 
+    @Test func failedPreflightSaveLeavesPendingEditsAndCreatesNoManagedCopy() async throws {
+        let library = temporaryLibraryDirectory()
+        defer { try? FileManager.default.removeItem(at: library) }
+        let context = try modelContext()
+        let existing = Book(title: "Original", author: "Tests", libraryRelativePath: "existing.epub", contentHash: "existing", format: .epub)
+        context.insert(existing)
+        try context.save()
+        existing.title = "Pending user edit"
+        let viewModel = ImportViewModel(importer: ImportService(libraryDirectory: library), saveChanges: { _ in
+            throw CocoaError(.fileWriteNoPermission)
+        })
+
+        await viewModel.importFiles([epubFixtureURL], into: context)
+
+        #expect(existing.title == "Pending user edit")
+        #expect(context.hasChanges)
+        #expect(!FileManager.default.fileExists(atPath: library.path))
+        #expect(viewModel.importErrors.count == 1)
+        #expect(try ModelContext(context.container).fetchCount(FetchDescriptor<Book>()) == 1)
+    }
+
+    @Test func committedImportClearsItsRecoveryRecord() async throws {
+        let library = temporaryLibraryDirectory()
+        defer { try? FileManager.default.removeItem(at: library) }
+        let context = try modelContext()
+        let importer = ImportService(libraryDirectory: library)
+        let viewModel = ImportViewModel(importer: importer)
+
+        await viewModel.importFiles([epubFixtureURL], into: context)
+
+        #expect(viewModel.importErrors.isEmpty)
+        #expect(try ModelContext(context.container).fetchCount(FetchDescriptor<Book>()) == 1)
+        #expect(try await !importer.hasPendingImports())
+    }
+
     @Test func pickerContentTypesExcludeCbr() {
         let fileExtensions = Set(ImportViewModel.supportedContentTypes.compactMap(\.preferredFilenameExtension))
 

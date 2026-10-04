@@ -121,7 +121,7 @@ struct LibraryView: View {
                 .font(VarqTypography.ui(.largeTitle))
             Text("Library recovery")
                 .font(VarqTypography.uiMedium(.title2))
-            Text(privateBookViewModel.errorMessage ?? "Varq recovers interrupted deletions and protection changes and cleans abandoned reader files before opening your library.")
+            Text(privateBookViewModel.errorMessage ?? "Varq recovers interrupted imports, deletions, and protection changes and cleans abandoned reader files before opening your library.")
                 .font(VarqTypography.ui(.body))
                 .multilineTextAlignment(.center)
             Button("Retry recovery") { recoverLibraryProtection() }

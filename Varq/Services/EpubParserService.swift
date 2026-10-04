@@ -8,7 +8,7 @@ struct EpubMetadata: Equatable, Sendable {
 }
 
 actor EpubParserService {
-    func parse(at fileURL: URL) throws -> EpubMetadata {
+    func parse(at fileURL: URL, fallbackTitle: String? = nil) throws -> EpubMetadata {
         let archive = try Archive(url: fileURL, accessMode: .read)
         let containerData = try extractData(from: archive, at: "META-INF/container.xml")
         let packagePath = try parsePackagePath(from: containerData)
@@ -21,7 +21,7 @@ actor EpubParserService {
         )
 
         return EpubMetadata(
-            title: package.title ?? fileURL.deletingPathExtension().lastPathComponent,
+            title: package.title ?? fallbackTitle ?? fileURL.deletingPathExtension().lastPathComponent,
             author: package.author ?? "Unknown Author",
             coverImageData: coverImageData
         )

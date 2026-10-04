@@ -1,7 +1,8 @@
 import Foundation
 import ZIPFoundation
 
-struct ImportedBook: Equatable, Sendable {
+nonisolated struct ImportedBook: Equatable, Sendable {
+    let id: UUID
     let title: String
     let author: String
     let coverImageData: Data?
@@ -10,8 +11,9 @@ struct ImportedBook: Equatable, Sendable {
     let format: BookFormat
 }
 
-enum ImportServiceError: Error {
+enum ImportServiceError: LocalizedError {
     case unsupportedFormat
+    var errorDescription: String? { "This file is not a readable EPUB, PDF, or CBZ book. Unsupported formats cannot be imported." }
 }
 
 actor ImportService {
@@ -20,6 +22,7 @@ actor ImportService {
     private let pdfParser: PDFParserService
     private let fileManager: FileManager
     private let contentHashService: ContentHashService
+    private let journal: ImportRecoveryJournalService
 
     init(
         libraryDirectory: URL,
@@ -33,120 +36,73 @@ actor ImportService {
         self.pdfParser = pdfParser
         self.fileManager = fileManager
         self.contentHashService = contentHashService
+        self.journal = ImportRecoveryJournalService(fileManager: fileManager)
     }
 
-    func importEpub(at sourceURL: URL) async throws -> ImportedBook {
-        guard sourceURL.pathExtension.lowercased() == BookFormat.epub.rawValue else {
-            throw ImportServiceError.unsupportedFormat
-        }
+    func importEpub(at sourceURL: URL) async throws -> ImportedBook { try await importBook(at: sourceURL, format: .epub) }
+    func importPDF(at sourceURL: URL) async throws -> ImportedBook { try await importBook(at: sourceURL, format: .pdf) }
+    func importCBZ(at sourceURL: URL) async throws -> ImportedBook { try await importBook(at: sourceURL, format: .cbz) }
 
-        let accessedSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
-        defer {
-            if accessedSecurityScopedResource {
-                sourceURL.stopAccessingSecurityScopedResource()
-            }
-        }
-
-        let metadata = try await epubParser.parse(at: sourceURL)
-        let contentHash = try await contentHashService.hash(of: sourceURL)
-        try fileManager.createDirectory(at: libraryDirectory, withIntermediateDirectories: true)
-
-        let fileName = UUID().uuidString + "." + BookFormat.epub.rawValue
-        let destinationURL = libraryDirectory.appendingPathComponent(fileName)
-        try fileManager.copyItem(at: sourceURL, to: destinationURL)
-
-        return ImportedBook(
-            title: metadata.title,
-            author: metadata.author,
-            coverImageData: metadata.coverImageData,
-            libraryRelativePath: fileName,
-            contentHash: contentHash,
-            format: .epub
-        )
+    /// Only after the caller's database insertion committed.
+    func completeImportedBook(_ book: ImportedBook) throws {
+        let record = try journal.record(for: book.libraryRelativePath, in: libraryDirectory)
+        guard record.bookID == book.id, record.contentHash == book.contentHash else { throw ImportRecoveryError.invalidJournal }
+        try journal.settle(record, keepingFile: true, in: libraryDirectory)
     }
 
-    func importPDF(at sourceURL: URL) async throws -> ImportedBook {
-        guard sourceURL.pathExtension.lowercased() == BookFormat.pdf.rawValue else {
-            throw ImportServiceError.unsupportedFormat
-        }
-
-        let accessedSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
-        defer {
-            if accessedSecurityScopedResource {
-                sourceURL.stopAccessingSecurityScopedResource()
-            }
-        }
-
-        let metadata: PDFMetadata
-        do {
-            metadata = try await pdfParser.parse(at: sourceURL)
-        } catch PDFParserError.invalidDocument {
-            throw ImportServiceError.unsupportedFormat
-        }
-        try fileManager.createDirectory(at: libraryDirectory, withIntermediateDirectories: true)
-
-        let fileName = UUID().uuidString + "." + BookFormat.pdf.rawValue
-        let destinationURL = libraryDirectory.appendingPathComponent(fileName)
-        try fileManager.copyItem(at: sourceURL, to: destinationURL)
-
-        let contentHash = try await contentHashService.hash(of: sourceURL)
-        return ImportedBook(
-            title: metadata.title,
-            author: metadata.author,
-            coverImageData: metadata.coverImageData,
-            libraryRelativePath: fileName,
-            contentHash: contentHash,
-            format: .pdf
-        )
-    }
-
+    /// Only for a duplicate or a failed, isolated database insertion.
     func discardImportedBook(at relativePath: String) throws {
-        let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
-        guard fileName == relativePath else {
-            throw ImportServiceError.unsupportedFormat
-        }
-
-        let importedFileURL = libraryDirectory.appendingPathComponent(fileName)
-        guard fileManager.fileExists(atPath: importedFileURL.path) else {
-            return
-        }
-        try fileManager.removeItem(at: importedFileURL)
+        let record = try journal.record(for: relativePath, in: libraryDirectory)
+        try journal.settle(record, keepingFile: false, in: libraryDirectory)
     }
 
-    func importCBZ(at sourceURL: URL) async throws -> ImportedBook {
-        guard sourceURL.pathExtension.lowercased() == BookFormat.cbz.rawValue else {
+    func hasPendingImports() throws -> Bool { try journal.hasPendingImports(in: libraryDirectory) }
+
+    private func importBook(at sourceURL: URL, format: BookFormat) async throws -> ImportedBook {
+        guard sourceURL.pathExtension.lowercased() == format.rawValue, [.epub, .pdf, .cbz].contains(format) else {
             throw ImportServiceError.unsupportedFormat
         }
-        let accessedSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
-        defer {
-            if accessedSecurityScopedResource {
-                sourceURL.stopAccessingSecurityScopedResource()
+        let accessed = sourceURL.startAccessingSecurityScopedResource()
+        defer { if accessed { sourceURL.stopAccessingSecurityScopedResource() } }
+        let hash = try await contentHashService.hash(of: sourceURL)
+        // Write-ahead ownership metadata precedes the first managed-file byte.
+        let record = try journal.begin(format: format, contentHash: hash, in: libraryDirectory)
+        let destination = libraryDirectory.appendingPathComponent(record.fileName)
+        do {
+            try fileManager.copyItem(at: sourceURL, to: destination)
+            try journal.verifyCopy(record, in: libraryDirectory)
+            let title: String
+            let author: String
+            let cover: Data?
+            let fallbackTitle = sourceURL.deletingPathExtension().lastPathComponent
+            // Parse only the verified managed snapshot, never a separately changing original.
+            switch format {
+            case .epub:
+                let metadata = try await epubParser.parse(at: destination, fallbackTitle: fallbackTitle)
+                title = metadata.title; author = metadata.author; cover = metadata.coverImageData
+            case .pdf:
+                let metadata: PDFMetadata
+                do { metadata = try await pdfParser.parse(at: destination, fallbackTitle: fallbackTitle) }
+                catch PDFParserError.invalidDocument { throw ImportServiceError.unsupportedFormat }
+                title = metadata.title; author = metadata.author; cover = metadata.coverImageData
+            case .cbz:
+                let archive = try Archive(url: destination, accessMode: .read)
+                let extensions: Set<String> = ["avif", "gif", "jpeg", "jpg", "png", "webp"]
+                guard let entry = archive.sorted(by: { $0.path < $1.path }).first(where: {
+                    extensions.contains(URL(fileURLWithPath: $0.path).pathExtension.lowercased())
+                }) else { throw ImportServiceError.unsupportedFormat }
+                var data = Data()
+                try archive.extract(entry) { data.append($0) }
+                title = fallbackTitle; author = "Unknown Author"; cover = data
+            case .cbr: throw ImportServiceError.unsupportedFormat
             }
+            return ImportedBook(id: record.bookID, title: title, author: author, coverImageData: cover,
+                                libraryRelativePath: record.fileName, contentHash: hash, format: format)
+        } catch {
+            let operation = error
+            do { try journal.settle(record, keepingFile: false, in: libraryDirectory) }
+            catch { throw ImportRecoveryError.cleanupFailed(operation: operation, cleanup: error) }
+            throw operation
         }
-
-        let archive = try Archive(url: sourceURL, accessMode: .read)
-        let imageExtensions: Set<String> = ["avif", "gif", "jpeg", "jpg", "png", "webp"]
-        guard let coverEntry = archive.sorted(by: { $0.path < $1.path }).first(where: {
-            imageExtensions.contains(URL(fileURLWithPath: $0.path).pathExtension.lowercased())
-        }) else {
-            throw ImportServiceError.unsupportedFormat
-        }
-        var coverImageData = Data()
-        try archive.extract(coverEntry) { coverImageData.append($0) }
-
-        let contentHash = try await contentHashService.hash(of: sourceURL)
-        try fileManager.createDirectory(at: libraryDirectory, withIntermediateDirectories: true)
-        let fileName = UUID().uuidString + "." + BookFormat.cbz.rawValue
-        try fileManager.copyItem(at: sourceURL, to: libraryDirectory.appendingPathComponent(fileName))
-
-        return ImportedBook(
-            title: sourceURL.deletingPathExtension().lastPathComponent,
-            author: "Unknown Author",
-            coverImageData: coverImageData,
-            libraryRelativePath: fileName,
-            contentHash: contentHash,
-            format: .cbz
-        )
     }
-
 }

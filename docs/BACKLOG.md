@@ -26,6 +26,7 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] `ImportService`: PDF import via PDFKit
 - [x] `ImportService`: CBZ import (archive extraction + first-page-as-cover)
 - [x] Hold chosen-folder access through nested imports and report partial discovery failures
+- [x] Journal managed-book imports and recover copy/save/cleanup interruptions without removing referenced or unknown files
 - CBR import is deferred to v1.1+; see the CBR deferral decision in `docs/PRD.md` section 8.
 - [x] Duplicate detection via content hash
 - [x] Drag-and-drop target on LibraryView + `NSOpenPanel` fallback

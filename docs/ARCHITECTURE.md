@@ -78,6 +78,8 @@ Book file handling must account for App Sandbox constraints — `ImportService` 
 5. Compute a content hash for duplicate detection before finalizing the import
 6. Copy the file into the app's sandboxed container (`Application Support/Varq/Library/`) — do not rely on the original file staying in place, since the user may move or delete it
 
+Actual copy/save ordering and recovery follow `docs/adr/0011-journal-managed-book-imports.md`: `ImportRecoveryJournalService` records ownership before the first managed-file byte; `ImportService` verifies and parses the copied snapshot, retaining original filename fallbacks. `ImportViewModel` serializes batches and saves a preassigned-ID book in an isolated autosave-disabled context. Cleanup never removes a committed reference or an unrecognized file. Startup reconciles against committed rows before deletion/protection recovery, and the shared gate skips reconciliation during active imports. Pending runtime cleanup closes that gate across windows; completed markers support interrupted recursive deletion.
+
 ## Book deletion
 
 See `docs/adr/0010-journal-managed-book-deletions.md`. `LibraryViewModel` stages the managed file through `BookDeletionService`, saves deletion and cascaded artifacts in an isolated autosave-disabled context, then removes the staged file and private key. Failed saves restore the exact file; failed restoration/cleanup retains the checksummed journal and closes the app-shared recovery gate. Startup uses committed rows to choose restoration versus cleanup before protection recovery. The view only dispatches the operation and displays errors.
