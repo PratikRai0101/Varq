@@ -10,6 +10,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
     private var publication: EpubPublication?
     private var appearance = ReadingAppearance()
     private var navigationContinuation: CheckedContinuation<Void, Error>?
+    private var pendingNavigation: WKNavigation?
     private var storedHighlights: [Highlight] = []
     private var storedNotes: [ReadingNote] = []
     private var annotationActionHandler: ((ReaderAnnotationAction) -> Void)?
@@ -53,6 +54,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
 
     func open(bookURL: URL, at locator: BookLocator? = nil) async throws {
         await close()
+        try await EpubWebIsolationService.shared.prepare(webView)
 
         let extractionDirectory = try sessionStorage.makeDirectory()
         let publication: EpubPublication
@@ -597,6 +599,8 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
     }
 
     func close() async {
+        resumeNavigation(throwing: CancellationError())
+        webView.stopLoading()
         if let publication {
             // BookRenderer.close is nonthrowing; storage retains failed removals
             // and blocks further cache allocation until cleanup can succeed.
@@ -665,23 +669,45 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        guard let navigation, let pendingNavigation, navigation === pendingNavigation else { return }
         navigationContinuation?.resume()
         navigationContinuation = nil
+        self.pendingNavigation = nil
     }
 
     func webView(
         _ webView: WKWebView,
         decidePolicyFor navigationAction: WKNavigationAction,
-        decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
+        preferences: WKWebpagePreferences,
+        decisionHandler: @escaping @MainActor (WKNavigationActionPolicy, WKWebpagePreferences) -> Void
     ) {
-        guard navigationAction.request.url?.scheme == "varq-note",
-              let host = navigationAction.request.url?.host,
-              let noteID = UUID(uuidString: host) else {
-            decisionHandler(.allow)
+        preferences.allowsContentJavaScript = false
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.cancel, preferences)
             return
         }
-        noteActivationHandler?(noteID)
-        decisionHandler(.cancel)
+        if url.scheme == "varq-note" {
+            if navigationAction.targetFrame?.isMainFrame == true,
+               let host = url.host, let noteID = UUID(uuidString: host),
+               storedNotes.contains(where: { $0.id == noteID }) {
+                noteActivationHandler?(noteID)
+            }
+            decisionHandler(.cancel, preferences)
+            return
+        }
+        // The app may clear the view while closing, but book navigation must
+        // remain in a main-frame spine document inside the extracted root.
+        let clearing = publication == nil && url.absoluteString == "about:blank"
+        let insideRoot = publication.map {
+            url.resolvingSymlinksInPath().standardizedFileURL.path.hasPrefix(
+                $0.rootDirectory.resolvingSymlinksInPath().standardizedFileURL.path + "/"
+            )
+        } ?? false
+        let localSpine = navigationAction.targetFrame?.isMainFrame == true && url.isFileURL && insideRoot &&
+            publication?.spine.contains(where: {
+                $0.fileURL.standardizedFileURL.path == url.standardizedFileURL.path
+            }) == true
+        decisionHandler(clearing || localSpine ? .allow : .cancel, preferences)
     }
 
     func webView(
@@ -689,6 +715,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
         didFail navigation: WKNavigation!,
         withError error: Error
     ) {
+        guard let navigation, let pendingNavigation, navigation === pendingNavigation else { return }
         resumeNavigation(throwing: error)
     }
 
@@ -697,6 +724,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
         didFailProvisionalNavigation navigation: WKNavigation!,
         withError error: Error
     ) {
+        guard let navigation, let pendingNavigation, navigation === pendingNavigation else { return }
         resumeNavigation(throwing: error)
     }
 
@@ -741,9 +769,11 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
     }
 
     private func load(_ resource: EpubSpineResource, allowingReadAccessTo directory: URL) async throws {
+        resumeNavigation(throwing: CancellationError())
         try await withCheckedThrowingContinuation { continuation in
             navigationContinuation = continuation
-            webView.loadFileURL(resource.fileURL, allowingReadAccessTo: directory)
+            pendingNavigation = webView.loadFileURL(resource.fileURL, allowingReadAccessTo: directory)
+            if pendingNavigation == nil { resumeNavigation(throwing: BookRendererError.invalidLocator) }
         }
     }
 
@@ -901,14 +931,8 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
 
     private func evaluate(script: String) async throws -> Any {
         try await withCheckedThrowingContinuation { continuation in
-            webView.evaluateJavaScript(script) { result, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else if let result {
-                    continuation.resume(returning: result)
-                } else {
-                    continuation.resume(throwing: BookRendererError.invalidLocator)
-                }
+            webView.evaluateJavaScript(script, in: nil, in: .defaultClient) { result in
+                continuation.resume(with: result)
             }
         }
     }
@@ -916,6 +940,7 @@ final class EpubWebRenderer: NSObject, BookRenderer, TextSelectionProviding, Cha
     private func resumeNavigation(throwing error: Error) {
         navigationContinuation?.resume(throwing: error)
         navigationContinuation = nil
+        pendingNavigation = nil
     }
 }
 

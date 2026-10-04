@@ -69,6 +69,10 @@ Book file handling must account for App Sandbox constraints — `ImportService` 
 - `BookLocator` is the canonical serialized representation of "where in the book" for `ReadingProgress`. `Highlight` stores the separate, versioned `TextHighlightAnchor` contract from `docs/adr/0004-store-text-highlights-as-versioned-range-anchors.md`; EPUB anchors are exact and PDFs persist normalized selection geometry per `docs/adr/0007-store-normalized-pdf-selection-geometry.md`. `ReadingNote` stores the separate, versioned `ReadingNoteAnchor` contract from `docs/adr/0008-model-reading-notes-separately-from-highlights.md`.
 - Validate EPUB and CBZ navigation with small permissively licensed fixtures before building a custom `ReaderView`. CBR is deferred to v1.1+ under the decision recorded in `docs/PRD.md` section 8.
 
+## EPUB web isolation
+
+See `docs/adr/0012-isolate-epub-web-content.md`. `EpubWebIsolationService` requires ephemeral website storage and installs resource blocking before the renderer loads a book. Navigation preferences disable author JavaScript; Varq evaluates trusted scripts in the default client content world. The navigation delegate cancels nonlocal/non-spine/subframe/new-window destinations, validates note IDs, and matches completions to pending native navigation objects. Local assets and reader annotations remain supported; interactive/online book content does not get an implicit fallback.
+
 ## Import pipeline
 
 1. User drags a file in, or picks via `NSOpenPanel` (sandboxed-safe). Folder selection accepts one directory; `FolderImportService` keeps its transient security scope alive through recursive discovery and awaited imports. It skips/reports symlinks, accepts regular supported files, and reports unreadable branches without discarding readable siblings. `ImportViewModel` combines discovery and per-file failures (see ADR 0002).

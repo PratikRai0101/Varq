@@ -41,6 +41,8 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 - [x] Journal managed-book deletion and recover file/save/key failures without losing surviving reading artifacts
 
 ## Phase 5 — Reader view core
+
+- [x] Isolate EPUB author scripts, resource loads, and navigation while preserving trusted reader interactions — automated WebKit coverage passes; signed-app HTTP/HTTPS inspection remains a release check in ADR 0012
 - [x] `ReaderViewModel`: coordinates the reader engine, exposes current reading locator/position
 - [x] `ReaderView`: paginated rendering, arrow key + trackpad swipe navigation
 - [x] Persist reading position to `ReadingProgress` on navigation/close
