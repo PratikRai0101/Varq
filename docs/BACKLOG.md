@@ -42,7 +42,8 @@ Ordered roughly by dependency. An agent picking up work should generally proceed
 
 ## Phase 5 — Reader view core
 
-- [x] Isolate EPUB author scripts, resource loads, and navigation while preserving trusted reader interactions — automated WebKit coverage passes; signed-app HTTP/HTTPS inspection remains a release check in ADR 0012
+- [x] Isolate EPUB author scripts, resource loads, and navigation while preserving trusted reader interactions — automated WebKit coverage passes; see ADR 0012
+- [x] Verify signed sandbox EPUB HTTP/HTTPS isolation with public/private fixtures and real-request controls — see `docs/verification/epub-network-isolation.md` for evidence and remaining normal-app smoke checks
 - [x] `ReaderViewModel`: coordinates the reader engine, exposes current reading locator/position
 - [x] `ReaderView`: paginated rendering, arrow key + trackpad swipe navigation
 - [x] Persist reading position to `ReadingProgress` on navigation/close
